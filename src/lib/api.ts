@@ -62,9 +62,23 @@ export function getRecentEntries(userId: string, limit = 20): Promise<WeekEntry[
   return request<WeekEntry[]>(`/api/entries?${query}`);
 }
 
-export function getDashboard(weeks: number): Promise<DashboardResponse> {
-  const query = new URLSearchParams({ weeks: String(weeks) }).toString();
-  return request<DashboardResponse>(`/api/dashboard?${query}`);
+interface DashboardQueryInput {
+  weeks?: number;
+  weekStart?: string;
+}
+
+export function getDashboard(input: DashboardQueryInput): Promise<DashboardResponse> {
+  const query = new URLSearchParams();
+
+  if (input.weekStart) {
+    query.set('weekStart', input.weekStart);
+  }
+
+  if (input.weeks) {
+    query.set('weeks', String(input.weeks));
+  }
+
+  return request<DashboardResponse>(`/api/dashboard?${query.toString()}`);
 }
 
 interface UpsertEntryInput {
