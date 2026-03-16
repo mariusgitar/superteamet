@@ -1,6 +1,7 @@
 import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
 import { getProjects, upsertEntry } from '../lib/api';
+import { formatWeekLabel } from '../lib/utils';
 import type { EntryType, Project } from '../types';
 import { AllocationSlider } from './AllocationSlider';
 import { ProjectSelector } from './ProjectSelector';
@@ -12,13 +13,13 @@ interface EntryFormProps {
   type: EntryType;
 }
 
-function distributeEvenly(projectIds: string[]): Record<string, number> {
-  if (projectIds.length === 0) return {};
+function distributeEvenly(total: number, ids: string[]): Record<string, number> {
+  if (ids.length === 0) return {};
 
-  const base = Math.floor(100 / projectIds.length);
-  let remainder = 100 - base * projectIds.length;
+  const base = Math.floor(total / ids.length);
+  let remainder = total - base * ids.length;
 
-  return projectIds.reduce<Record<string, number>>((acc, id) => {
+  return ids.reduce<Record<string, number>>((acc, id) => {
     const bonus = remainder > 0 ? 1 : 0;
     acc[id] = base + bonus;
     remainder -= bonus;
@@ -26,12 +27,71 @@ function distributeEvenly(projectIds: string[]): Record<string, number> {
   }, {});
 }
 
+function normalizeToHundred(input: Record<string, number>, ids: string[]): Record<string, number> {
+  if (ids.length === 0) return {};
+
+  const normalized: Record<string, number> = {};
+  for (const id of ids) {
+    normalized[id] = Math.max(0, Math.min(100, Math.round(input[id] ?? 0)));
+  }
+
+  let delta = 100 - ids.reduce((sum, id) => sum + normalized[id], 0);
+  let idx = 0;
+  while (delta !== 0 && ids.length > 0) {
+    const id = ids[idx % ids.length];
+    if (delta > 0 && normalized[id] < 100) {
+      normalized[id] += 1;
+      delta -= 1;
+    } else if (delta < 0 && normalized[id] > 0) {
+      normalized[id] -= 1;
+      delta += 1;
+    }
+    idx += 1;
+  }
+
+  return normalized;
+}
+
+function nextAllocations(
+  currentIds: string[],
+  nextIds: string[],
+  currentAllocations: Record<string, number>,
+): Record<string, number> {
+  if (nextIds.length === 0) return {};
+
+  if (currentIds.length === 0) {
+    return distributeEvenly(100, nextIds);
+  }
+
+  const added = nextIds.filter((id) => !currentIds.includes(id));
+  if (added.length > 0) {
+    const kept = currentIds.filter((id) => nextIds.includes(id));
+    const used = kept.reduce((sum, id) => sum + (currentAllocations[id] ?? 0), 0);
+    const remaining = Math.max(0, 100 - used);
+    return normalizeToHundred({ ...currentAllocations, ...distributeEvenly(remaining, added) }, nextIds);
+  }
+
+  const removed = currentIds.filter((id) => !nextIds.includes(id));
+  if (removed.length > 0) {
+    const removedTotal = removed.reduce((sum, id) => sum + (currentAllocations[id] ?? 0), 0);
+    const kept = nextIds;
+    const redistributed = distributeEvenly(removedTotal, kept);
+    const merged = kept.reduce<Record<string, number>>((acc, id) => {
+      acc[id] = (currentAllocations[id] ?? 0) + (redistributed[id] ?? 0);
+      return acc;
+    }, {});
+    return normalizeToHundred(merged, nextIds);
+  }
+
+  return normalizeToHundred(currentAllocations, nextIds);
+}
+
 export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [allocations, setAllocations] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
-
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   useEffect(() => {
     const loadProjects = async () => {
       setProjects(await getProjects());
@@ -40,16 +100,14 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
     void loadProjects();
   }, []);
 
-  useEffect(() => {
-    setAllocations(distributeEvenly(selectedProjectIds));
-  }, [selectedProjectIds]);
-
-  const total = useMemo(
-    () => Math.round(Object.values(allocations).reduce((sum, value) => sum + value, 0)),
-    [allocations],
-  );
+  const total = useMemo(() => Object.values(allocations).reduce((sum, value) => sum + value, 0), [allocations]);
 
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
+
+  const handleProjectChange = (nextProjectIds: string[]) => {
+    setSelectedProjectIds(nextProjectIds);
+    setAllocations((current) => nextAllocations(selectedProjectIds, nextProjectIds, current));
+  };
 
   const handleSliderChange = (projectId: string, nextValue: number) => {
     setAllocations((current) => ({ ...current, [projectId]: Math.round(nextValue) }));
@@ -59,9 +117,12 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
     if (total !== 100 || selectedProjectIds.length === 0) return;
 
     setSubmitting(true);
+    setSuccessMessage(null);
     try {
-      await upsertEntry({ userId, weekStart, type, allocations });
+      const payloadType: EntryType = 'plan';
+      await upsertEntry({ userId, weekStart, type: payloadType, allocations });
       void confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
+      setSuccessMessage(`Plan lagret for uke ${formatWeekLabel(weekStart)} 🎉`);
     } finally {
       setSubmitting(false);
     }
@@ -72,7 +133,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
       <h2 className="text-xl font-semibold">Registrer {type === 'plan' ? 'plan' : 'faktisk tid'}</h2>
 
       <ProjectSelector
-        onChange={setSelectedProjectIds}
+        onChange={handleProjectChange}
         selectedProjectIds={selectedProjectIds}
         userId={userId}
       />
@@ -90,13 +151,15 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
 
       <TotalIndicator total={total} />
 
+      {successMessage ? <p className="text-sm text-emerald-700">{successMessage}</p> : null}
+
       <button
         className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-40"
         disabled={submitting || total !== 100 || selectedProjectIds.length === 0}
         onClick={() => void handleSubmit()}
         type="button"
       >
-        {submitting ? 'Sender...' : 'Lagre'}
+        {submitting ? 'Sender...' : 'Lagre plan'}
       </button>
     </section>
   );

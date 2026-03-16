@@ -15,6 +15,24 @@ function unauthorized(res: VercelResponse) {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'GET') {
+      const [countRow] = await sql<{ count: string }[]>`
+        SELECT COUNT(*)::text AS count
+        FROM projects
+      `;
+
+      if (Number(countRow?.count ?? '0') === 0) {
+        await sql`
+          INSERT INTO projects (name, color)
+          VALUES
+            ('LLP-kortdekk', '#6366F1'),
+            ('TemAi', '#E86B5F'),
+            ('PersonWerner', '#F4A442'),
+            ('Strategiarbeid', '#6BCB8B'),
+            ('Administrasjon', '#A78BFA')
+          ON CONFLICT DO NOTHING
+        `;
+      }
+
       const rows = await sql<ProjectRow[]>`
         SELECT id, name, color, active
         FROM projects
