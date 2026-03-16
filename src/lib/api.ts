@@ -16,18 +16,6 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
 export function getUsers(): Promise<User[]> {
   return request<User[]>('/api/users');
 }
-
-export function createUser(name: string): Promise<User> {
-  return request<User>('/api/users', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-secret': API_SECRET,
-    },
-    body: JSON.stringify({ name }),
-  });
-}
-
 export function getProjects(): Promise<Project[]> {
   return request<Project[]>('/api/projects');
 }

@@ -14,6 +14,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method === 'GET') {
       const rows = await sql<UserRow[]>`SELECT id, name FROM users ORDER BY name ASC`;
+
+      if (rows.length === 0) {
+        await sql`
+          INSERT INTO users (name)
+          VALUES ('Marius'), ('Vibeke'), ('Kristian')
+          ON CONFLICT (name) DO NOTHING
+        `;
+
+        const seededRows = await sql<UserRow[]>`SELECT id, name FROM users ORDER BY name ASC`;
+        return res.status(200).json(seededRows);
+      }
+
       return res.status(200).json(rows);
     }
 
