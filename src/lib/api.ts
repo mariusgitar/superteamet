@@ -16,6 +16,7 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
 export function getUsers(): Promise<User[]> {
   return request<User[]>('/api/users');
 }
+
 export function getProjects(): Promise<Project[]> {
   return request<Project[]>('/api/projects');
 }
@@ -26,7 +27,12 @@ export function getWeekEntries(userId: string, start: string): Promise<WeekEntri
 }
 
 export function getActualHistory(userId: string): Promise<WeekEntry[]> {
-  const query = new URLSearchParams({ userId, type: 'actual', limit: '5' }).toString();
+  const query = new URLSearchParams({ userId, limit: '5', type: 'actual' }).toString();
+  return request<WeekEntry[]>(`/api/entries?${query}`);
+}
+
+export function getRecentEntries(userId: string, limit = 20): Promise<WeekEntry[]> {
+  const query = new URLSearchParams({ userId, limit: String(limit) }).toString();
   return request<WeekEntry[]>(`/api/entries?${query}`);
 }
 

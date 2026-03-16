@@ -8,6 +8,48 @@ export function weekStart(date: Date = new Date()): string {
   return d.toISOString().split('T')[0];
 }
 
+export function accuracyScore(
+  plan: Record<string, number>,
+  actual: Record<string, number>,
+): number {
+  const allKeys = new Set([...Object.keys(plan), ...Object.keys(actual)]);
+  let totalDiff = 0;
+
+  for (const key of allKeys) {
+    totalDiff += Math.abs((plan[key] ?? 0) - (actual[key] ?? 0));
+  }
+
+  return Math.round(100 - totalDiff / 2);
+}
+
+export function calculateStreak(entries: WeekEntry[], currentWeekStart: string): number {
+  const weekTypes = new Map<string, Set<WeekEntry['type']>>();
+
+  for (const entry of entries) {
+    const current = weekTypes.get(entry.weekStart) ?? new Set<WeekEntry['type']>();
+    current.add(entry.type);
+    weekTypes.set(entry.weekStart, current);
+  }
+
+  const completeWeeks = [...weekTypes.entries()]
+    .filter(([, types]) => types.has('plan') && types.has('actual'))
+    .map(([week]) => week)
+    .sort((a, b) => b.localeCompare(a));
+
+  const completeWeekSet = new Set(completeWeeks);
+  let streak = 0;
+  let cursor = currentWeekStart;
+
+  while (completeWeekSet.has(cursor)) {
+    streak += 1;
+    const cursorDate = new Date(`${cursor}T00:00:00`);
+    cursorDate.setDate(cursorDate.getDate() - 7);
+    cursor = weekStart(cursorDate);
+  }
+
+  return streak;
+}
+
 export function sortProjects(projects: Project[], history: WeekEntry[]): Project[] {
   if (history.length === 0) {
     return [...projects].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
