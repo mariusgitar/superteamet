@@ -1,7 +1,6 @@
 import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
-import { getProjects, getUserEntries } from '../lib/api';
-import { buildBadges } from '../lib/gamification';
+import { getProjects, getRecentEntries } from '../lib/api';
 import { accuracyScore, calculateStreak } from '../lib/utils';
 import type { Project, WeekEntry } from '../types';
 
@@ -40,14 +39,17 @@ function scoreLabel(score: number): string {
 
 export function AccuracyCard({ plan, actual, userId, currentWeekStart }: AccuracyCardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [allEntries, setAllEntries] = useState<WeekEntry[]>([]);
+  const [recentEntries, setRecentEntries] = useState<WeekEntry[]>([]);
   const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
-      const [projectData, entriesData] = await Promise.all([getProjects(), getUserEntries(userId)]);
+      const [projectData, entriesData] = await Promise.all([
+        getProjects(),
+        getRecentEntries(userId, 20),
+      ]);
       setProjects(projectData);
-      setAllEntries(entriesData);
+      setRecentEntries(entriesData);
     };
 
     void loadData();
@@ -98,9 +100,7 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
       .sort((a, b) => (a.project?.name ?? '').localeCompare(b.project?.name ?? '', 'nb'));
   }, [projects, plan.allocations, actual.allocations]);
 
-  const streak = calculateStreak(allEntries, currentWeekStart);
-  const badges = buildBadges(allEntries);
-  const earnedCount = badges.filter((badge) => badge.earned).length;
+  const streak = calculateStreak(recentEntries, currentWeekStart);
 
   return (
     <section className="space-y-5 rounded-lg bg-white p-5 shadow-sm">
@@ -112,20 +112,6 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
 
       <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
         🔥 {streak} uker på rad
-      </div>
-
-      <div className="space-y-2">
-        <p className="text-sm font-medium text-slate-600">{earnedCount} av {badges.length} badges</p>
-        <div className="flex flex-wrap gap-2">
-          {badges.map((badge) => (
-            <span
-              className={`rounded-full px-3 py-1 text-sm ${badge.earned ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}
-              key={badge.id}
-            >
-              {badge.earned ? `${badge.icon} ${badge.label}` : `🔒 ${badge.label}`}
-            </span>
-          ))}
-        </div>
       </div>
 
       <div className="space-y-3">

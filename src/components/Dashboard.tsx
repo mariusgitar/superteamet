@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { User, WeekEntry } from '../types';
-import { getDashboard } from '../lib/api';
+import { getDashboard, getUsers } from '../lib/api';
 import { aggregateWeeks, buildInsights } from '../lib/dashboard';
 import { InsightPanel } from './InsightPanel';
-import { Leaderboard } from './Leaderboard';
 import { ProjectTrendChart } from './ProjectTrendChart';
 import { TeamWeekChart } from './TeamWeekChart';
 
@@ -17,18 +16,28 @@ export function Dashboard() {
   const [range, setRange] = useState(12);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState({ weeks: [], projects: [], entries: [] as WeekEntry[], allEntries: [] as WeekEntry[] });
+  const [dashboard, setDashboard] = useState({ weeks: [], projects: [], entries: [] as WeekEntry[] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setUsers(await getUsers());
+      } catch {
+        setUsers([]);
+      }
+    };
+
+    void loadUsers();
+  }, []);
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        const data = await getDashboard(range);
-        setDashboard(data);
-        setUsers(data.users);
+        setDashboard(await getDashboard(range));
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Klarte ikke å hente dashboard-data.');
       } finally {
@@ -93,8 +102,6 @@ export function Dashboard() {
 
   return (
     <section className="space-y-4">
-      <Leaderboard entries={dashboard.allEntries} users={users} />
-
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
