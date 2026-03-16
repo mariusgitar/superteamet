@@ -76,17 +76,29 @@ export function EntryForm({
       const sortedProjects = sortProjects(activeProjects, history);
       setProjects(sortedProjects);
 
-      const recentProjectIds = new Set<string>();
+      const recentProjectIds: string[] = [];
+      const seenRecentIds = new Set<string>();
+
       for (const entry of history) {
         for (const projectId of Object.keys(entry.allocations)) {
-          recentProjectIds.add(projectId);
+          if (seenRecentIds.has(projectId)) continue;
+          seenRecentIds.add(projectId);
+          recentProjectIds.push(projectId);
         }
       }
 
-      const sortedRecentIds = sortedProjects
-        .map((project) => project.id)
-        .filter((projectId) => recentProjectIds.has(projectId))
-        .slice(0, 6);
+      const alphabeticalProjectIds = [...activeProjects]
+        .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+        .map((project) => project.id);
+
+      const defaultProjectIds = [...recentProjectIds];
+      for (const projectId of alphabeticalProjectIds) {
+        if (defaultProjectIds.length >= 6) break;
+        if (seenRecentIds.has(projectId)) continue;
+        defaultProjectIds.push(projectId);
+      }
+
+      const sortedRecentIds = defaultProjectIds.slice(0, 6);
 
       const lastWeekAllocations = history[0]?.allocations ?? {};
 
