@@ -1,15 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { User, WeekEntriesResponse } from '../types';
 import { getWeekEntries } from '../lib/api';
+import { weekStart } from '../lib/utils';
 import { AccuracyCard } from './AccuracyCard';
 import { EntryForm } from './EntryForm';
 
 interface WeekViewProps {
   user: User;
   currentWeekStart: string;
+  onStreakMilestone?: (streak: number) => void;
 }
 
-export function WeekView({ user, currentWeekStart }: WeekViewProps) {
+export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekViewProps) {
   const [entries, setEntries] = useState<WeekEntriesResponse>({ plan: null, actual: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -30,12 +32,46 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
     void loadEntries();
   }, [user.id, currentWeekStart]);
 
+  const isTooFarInPastWithoutPlan = useMemo(() => {
+    if (entries.plan) return false;
+    const thisWeek = weekStart();
+    const oneWeekAgo = new Date(`${thisWeek}T00:00:00`);
+    oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+    const oneWeekAgoStart = weekStart(oneWeekAgo);
+    return currentWeekStart < oneWeekAgoStart;
+  }, [currentWeekStart, entries.plan]);
+
   if (loading) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-sm">Laster ukevisning...</p>;
+    return (
+      <section className="rounded-lg bg-white p-5 shadow-sm">
+        <div className="space-y-4">
+          <div className="h-7 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-28 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-40 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-10 animate-pulse rounded-md bg-gray-200" />
+        </div>
+      </section>
+    );
   }
 
   if (error) {
     return <p className="rounded-lg bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
+  }
+
+  if (isTooFarInPastWithoutPlan) {
+    return (
+      <section className="rounded-lg bg-white p-8 text-center shadow-sm">
+        <div className="mx-auto mb-4 w-20 text-slate-400" aria-hidden>
+          <svg fill="none" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+            <rect x="15" y="20" width="90" height="82" rx="10" className="fill-slate-100 stroke-slate-300" strokeWidth="4" />
+            <path d="M15 42H105" className="stroke-slate-300" strokeWidth="4" />
+            <path d="M36 12V30M84 12V30" className="stroke-slate-400" strokeLinecap="round" strokeWidth="6" />
+            <text x="60" y="82" textAnchor="middle" className="fill-slate-500 text-4xl font-semibold">?</text>
+          </svg>
+        </div>
+        <p className="text-lg font-medium text-slate-700">Ingen registreringer for denne uka.</p>
+      </section>
+    );
   }
 
   if (!entries.plan) {
@@ -46,6 +82,7 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
         userId={user.id}
         weekStart={currentWeekStart}
         onSubmitted={loadEntries}
+        onStreakMilestone={onStreakMilestone}
       />
     );
   }
@@ -59,6 +96,7 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
         userId={user.id}
         weekStart={currentWeekStart}
         onSubmitted={loadEntries}
+        onStreakMilestone={onStreakMilestone}
       />
     );
   }

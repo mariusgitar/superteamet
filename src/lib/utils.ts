@@ -89,6 +89,10 @@ export function formatWeekLabel(weekStartDate: string): string {
   return `Uke ${weekNo} · ${start.getDate()}–${end.getDate()} ${month}`;
 }
 
+export function weekNumber(weekStartDate: string): number {
+  return isoWeek(new Date(`${weekStartDate}T00:00:00`));
+}
+
 function isoWeek(date: Date): number {
   const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
   const day = tmp.getUTCDay() || 7;

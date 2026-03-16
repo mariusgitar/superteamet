@@ -1,3 +1,4 @@
+import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
 import { getProjects, getRecentEntries } from '../lib/api';
 import { accuracyScore, calculateStreak } from '../lib/utils';
@@ -9,6 +10,8 @@ interface AccuracyCardProps {
   userId: string;
   currentWeekStart: string;
 }
+
+const celebratedActualEntries = new Set<string>();
 
 function colorClass(color: string): string {
   switch (color.toUpperCase()) {
@@ -37,6 +40,7 @@ function scoreLabel(score: number): string {
 export function AccuracyCard({ plan, actual, userId, currentWeekStart }: AccuracyCardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentEntries, setRecentEntries] = useState<WeekEntry[]>([]);
+  const [animatedScore, setAnimatedScore] = useState(0);
 
   useEffect(() => {
     const loadData = async () => {
@@ -52,6 +56,35 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
   }, [userId]);
 
   const score = accuracyScore(plan.allocations, actual.allocations);
+
+  useEffect(() => {
+    const durationMs = 800;
+    const startTime = performance.now();
+
+    const tick = (time: number) => {
+      const elapsed = Math.min((time - startTime) / durationMs, 1);
+      const eased = 1 - Math.pow(1 - elapsed, 3);
+      setAnimatedScore(Math.round(score * eased));
+
+      if (elapsed < 1) {
+        requestAnimationFrame(tick);
+      }
+    };
+
+    setAnimatedScore(0);
+    const frameId = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frameId);
+  }, [score]);
+
+  useEffect(() => {
+    if (score < 90 || celebratedActualEntries.has(actual.id)) {
+      return;
+    }
+
+    celebratedActualEntries.add(actual.id);
+    void confetti({ particleCount: 140, spread: 80, origin: { y: 0.55 } });
+  }, [actual.id, score]);
 
   const comparisonRows = useMemo(() => {
     const projectById = new Map(projects.map((project) => [project.id, project]));
@@ -73,7 +106,7 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
     <section className="space-y-5 rounded-lg bg-white p-5 shadow-sm">
       <div className="text-center">
         <p className="text-sm font-medium text-slate-500">Treffscore</p>
-        <p className="text-5xl font-bold text-indigo-600">{score}</p>
+        <p className="text-5xl font-bold text-indigo-600">{animatedScore}</p>
         <p className="mt-1 text-base text-slate-700">{scoreLabel(score)}</p>
       </div>
 
