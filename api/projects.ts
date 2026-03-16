@@ -33,12 +33,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         `;
       }
 
-      const rows = await sql<ProjectRow[]>`
-        SELECT id, name, color, active
-        FROM projects
-        WHERE active = true
-        ORDER BY name ASC
-      `;
+      const includeArchived = String(req.query.includeArchived ?? 'false') === 'true';
+      const rows = includeArchived
+        ? await sql<ProjectRow[]>`
+            SELECT id, name, color, active
+            FROM projects
+            ORDER BY active DESC, name ASC
+          `
+        : await sql<ProjectRow[]>`
+            SELECT id, name, color, active
+            FROM projects
+            WHERE active = true
+            ORDER BY name ASC
+          `;
+
       return res.status(200).json(rows);
     }
 

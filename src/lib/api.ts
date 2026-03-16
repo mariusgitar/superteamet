@@ -21,6 +21,32 @@ export function getProjects(): Promise<Project[]> {
   return request<Project[]>('/api/projects');
 }
 
+export function getAllProjects(): Promise<Project[]> {
+  return request<Project[]>('/api/projects?includeArchived=true');
+}
+
+export function createProject(input: { name: string; color: string }): Promise<Project> {
+  return request<Project>('/api/projects', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-secret': API_SECRET,
+    },
+    body: JSON.stringify(input),
+  });
+}
+
+export function updateProject(projectId: string, input: { name?: string; color?: string; active?: boolean }): Promise<Project> {
+  return request<Project>(`/api/projects/${projectId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-secret': API_SECRET,
+    },
+    body: JSON.stringify(input),
+  });
+}
+
 export function getWeekEntries(userId: string, start: string): Promise<WeekEntriesResponse> {
   const query = new URLSearchParams({ userId, weekStart: start }).toString();
   return request<WeekEntriesResponse>(`/api/entries?${query}`);
