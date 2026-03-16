@@ -3,9 +3,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { getProjects, upsertEntry } from '../lib/api';
 import { formatWeekLabel } from '../lib/utils';
 import type { EntryType, Project } from '../types';
-import { AllocationSlider } from './AllocationSlider';
 import { ProjectSelector } from './ProjectSelector';
 import { TotalIndicator } from './TotalIndicator';
+import { VerticalSlider } from './VerticalSlider';
 
 interface EntryFormProps {
   userId: string;
@@ -13,77 +13,109 @@ interface EntryFormProps {
   type: EntryType;
 }
 
-function distributeEvenly(total: number, ids: string[]): Record<string, number> {
+function distributeEvenlyInTens(ids: string[]): Record<string, number> {
   if (ids.length === 0) return {};
 
-  const base = Math.floor(total / ids.length);
-  let remainder = total - base * ids.length;
+  const base = Math.floor((100 / ids.length) / 10) * 10;
+  let remainder = 100 - base * ids.length;
 
-  return ids.reduce<Record<string, number>>((acc, id) => {
-    const bonus = remainder > 0 ? 1 : 0;
-    acc[id] = base + bonus;
-    remainder -= bonus;
+  const next = ids.reduce<Record<string, number>>((acc, id) => {
+    acc[id] = base;
     return acc;
   }, {});
-}
 
-function normalizeToHundred(input: Record<string, number>, ids: string[]): Record<string, number> {
-  if (ids.length === 0) return {};
-
-  const normalized: Record<string, number> = {};
-  for (const id of ids) {
-    normalized[id] = Math.max(0, Math.min(100, Math.round(input[id] ?? 0)));
-  }
-
-  let delta = 100 - ids.reduce((sum, id) => sum + normalized[id], 0);
   let idx = 0;
-  while (delta !== 0 && ids.length > 0) {
+  while (remainder > 0) {
     const id = ids[idx % ids.length];
-    if (delta > 0 && normalized[id] < 100) {
-      normalized[id] += 1;
-      delta -= 1;
-    } else if (delta < 0 && normalized[id] > 0) {
-      normalized[id] -= 1;
-      delta += 1;
-    }
+    next[id] += 10;
+    remainder -= 10;
     idx += 1;
   }
 
-  return normalized;
+  return next;
 }
 
-function nextAllocations(
-  currentIds: string[],
-  nextIds: string[],
-  currentAllocations: Record<string, number>,
+function transferFromHighestOther(
+  allocations: Record<string, number>,
+  ids: string[],
+  selectedId: string,
+): string | null {
+  const candidates = ids.filter((id) => id !== selectedId);
+  if (candidates.length === 0) return null;
+
+  let highestId: string | null = null;
+  let highestValue = -1;
+  for (const id of candidates) {
+    const value = allocations[id] ?? 0;
+    if (value > highestValue) {
+      highestValue = value;
+      highestId = id;
+    }
+  }
+
+  return highestValue > 0 ? highestId : null;
+}
+
+function transferToLowestOther(
+  allocations: Record<string, number>,
+  ids: string[],
+  selectedId: string,
+): string | null {
+  const candidates = ids.filter((id) => id !== selectedId);
+  if (candidates.length === 0) return null;
+
+  let lowestId: string | null = null;
+  let lowestValue = Number.POSITIVE_INFINITY;
+  for (const id of candidates) {
+    const value = allocations[id] ?? 0;
+    if (value < lowestValue) {
+      lowestValue = value;
+      lowestId = id;
+    }
+  }
+
+  return lowestId;
+}
+
+function redistributeAllocations(
+  current: Record<string, number>,
+  ids: string[],
+  projectId: string,
+  requestedValue: number,
 ): Record<string, number> {
-  if (nextIds.length === 0) return {};
-
-  if (currentIds.length === 0) {
-    return distributeEvenly(100, nextIds);
+  if (ids.length <= 1) {
+    return ids.length === 1 ? { [ids[0]]: 100 } : {};
   }
 
-  const added = nextIds.filter((id) => !currentIds.includes(id));
-  if (added.length > 0) {
-    const kept = currentIds.filter((id) => nextIds.includes(id));
-    const used = kept.reduce((sum, id) => sum + (currentAllocations[id] ?? 0), 0);
-    const remaining = Math.max(0, 100 - used);
-    return normalizeToHundred({ ...currentAllocations, ...distributeEvenly(remaining, added) }, nextIds);
+  const roundedTarget = Math.max(0, Math.min(100, Math.round(requestedValue / 10) * 10));
+  const currentValue = current[projectId] ?? 0;
+  const delta = roundedTarget - currentValue;
+  if (delta === 0) return current;
+
+  const next = { ...current };
+  let remaining = Math.abs(delta);
+
+  if (delta > 0) {
+    while (remaining > 0) {
+      const donorId = transferFromHighestOther(next, ids, projectId);
+      if (!donorId) break;
+      const transfer = Math.min(10, remaining, next[donorId]);
+      next[donorId] -= transfer;
+      next[projectId] = (next[projectId] ?? 0) + transfer;
+      remaining -= transfer;
+    }
+  } else {
+    while (remaining > 0 && (next[projectId] ?? 0) > 0) {
+      const receiverId = transferToLowestOther(next, ids, projectId);
+      if (!receiverId) break;
+      const transfer = Math.min(10, remaining, next[projectId]);
+      next[projectId] -= transfer;
+      next[receiverId] = (next[receiverId] ?? 0) + transfer;
+      remaining -= transfer;
+    }
   }
 
-  const removed = currentIds.filter((id) => !nextIds.includes(id));
-  if (removed.length > 0) {
-    const removedTotal = removed.reduce((sum, id) => sum + (currentAllocations[id] ?? 0), 0);
-    const kept = nextIds;
-    const redistributed = distributeEvenly(removedTotal, kept);
-    const merged = kept.reduce<Record<string, number>>((acc, id) => {
-      acc[id] = (currentAllocations[id] ?? 0) + (redistributed[id] ?? 0);
-      return acc;
-    }, {});
-    return normalizeToHundred(merged, nextIds);
-  }
-
-  return normalizeToHundred(currentAllocations, nextIds);
+  return next;
 }
 
 export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
@@ -92,6 +124,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   const [allocations, setAllocations] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
   useEffect(() => {
     const loadProjects = async () => {
       setProjects(await getProjects());
@@ -101,16 +134,15 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   }, []);
 
   const total = useMemo(() => Object.values(allocations).reduce((sum, value) => sum + value, 0), [allocations]);
-
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
 
   const handleProjectChange = (nextProjectIds: string[]) => {
     setSelectedProjectIds(nextProjectIds);
-    setAllocations((current) => nextAllocations(selectedProjectIds, nextProjectIds, current));
+    setAllocations(distributeEvenlyInTens(nextProjectIds));
   };
 
   const handleSliderChange = (projectId: string, nextValue: number) => {
-    setAllocations((current) => ({ ...current, [projectId]: Math.round(nextValue) }));
+    setAllocations((current) => redistributeAllocations(current, selectedProjectIds, projectId, nextValue));
   };
 
   const handleSubmit = async () => {
@@ -138,15 +170,22 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
         userId={userId}
       />
 
-      <div className="space-y-3">
-        {selectedProjectIds.map((projectId) => (
-          <AllocationSlider
-            key={projectId}
-            label={projectById.get(projectId)?.name ?? 'Prosjekt'}
-            onChange={(value) => handleSliderChange(projectId, value)}
-            value={allocations[projectId] ?? 0}
-          />
-        ))}
+      <div className="overflow-x-auto">
+        <div className="flex min-w-fit justify-center gap-4 pb-2">
+          {selectedProjectIds.map((projectId) => {
+            const project = projectById.get(projectId);
+            return (
+              <VerticalSlider
+                key={projectId}
+                color={project?.color ?? '#6366F1'}
+                disabled={selectedProjectIds.length === 1}
+                onChange={(value) => handleSliderChange(projectId, value)}
+                projectName={project?.name ?? 'Prosjekt'}
+                value={allocations[projectId] ?? 0}
+              />
+            );
+          })}
+        </div>
       </div>
 
       <TotalIndicator total={total} />
@@ -155,7 +194,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
 
       <button
         className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-40"
-        disabled={submitting || total !== 100 || selectedProjectIds.length === 0}
+        disabled={submitting || selectedProjectIds.length === 0}
         onClick={() => void handleSubmit()}
         type="button"
       >
