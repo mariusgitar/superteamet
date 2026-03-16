@@ -1,4 +1,4 @@
-import type { EntryType, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
+import type { DashboardResponse, EntryType, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
 
 const API_SECRET = import.meta.env.VITE_API_SECRET;
 
@@ -60,6 +60,11 @@ export function getActualHistory(userId: string): Promise<WeekEntry[]> {
 export function getRecentEntries(userId: string, limit = 20): Promise<WeekEntry[]> {
   const query = new URLSearchParams({ userId, limit: String(limit) }).toString();
   return request<WeekEntry[]>(`/api/entries?${query}`);
+}
+
+export function getDashboard(weeks: number): Promise<DashboardResponse> {
+  const query = new URLSearchParams({ weeks: String(weeks) }).toString();
+  return request<DashboardResponse>(`/api/dashboard?${query}`);
 }
 
 interface UpsertEntryInput {

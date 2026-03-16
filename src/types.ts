@@ -27,3 +27,9 @@ export interface WeekEntriesResponse {
   plan: WeekEntry | null;
   actual: WeekEntry | null;
 }
+
+export interface DashboardResponse {
+  weeks: string[];
+  projects: Project[];
+  entries: WeekEntry[];
+}
