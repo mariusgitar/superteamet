@@ -1,92 +1,179 @@
-import { useEffect, useMemo, useState } from 'react';
-import { getActualHistory, getProjects } from '../lib/api';
-import { sortProjects } from '../lib/utils';
+import { useMemo, useState } from 'react';
+import { createProject } from '../lib/api';
 import type { Project } from '../types';
-
-function colorClass(color: string): string {
-  switch (color.toUpperCase()) {
-    case '#6366F1':
-      return 'bg-indigo-500';
-    case '#E86B5F':
-      return 'bg-rose-400';
-    case '#F4A442':
-      return 'bg-amber-400';
-    case '#6BCB8B':
-      return 'bg-emerald-400';
-    case '#A78BFA':
-      return 'bg-violet-400';
-    default:
-      return 'bg-slate-400';
-  }
-}
+import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
 
 interface ProjectSelectorProps {
-  userId: string;
-  selectedProjectIds: string[];
-  onChange: (projectIds: string[]) => void;
+  projects: Project[];
+  visibleProjectIds: string[];
+  sliderValues: Record<string, number>;
+  removableProjectIds: Set<string>;
+  totalSliderValue: number;
+  onSliderChange: (projectId: string, value: number) => void;
+  onAddProject: (projectId: string, removable: boolean) => void;
+  onRemoveProject: (projectId: string) => void;
+  onProjectCreated: (project: Project) => void;
 }
 
-export function ProjectSelector({ userId, selectedProjectIds, onChange }: ProjectSelectorProps) {
-  const [projects, setProjects] = useState<Project[]>([]);
-  const [historyProjectIds, setHistoryProjectIds] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function roundToOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        const [activeProjects, history] = await Promise.all([getProjects(), getActualHistory(userId)]);
-        setProjects(sortProjects(activeProjects, history));
+export function ProjectSelector({
+  projects,
+  visibleProjectIds,
+  sliderValues,
+  removableProjectIds,
+  totalSliderValue,
+  onSliderChange,
+  onAddProject,
+  onRemoveProject,
+  onProjectCreated,
+}: ProjectSelectorProps) {
+  const [addOpen, setAddOpen] = useState(false);
+  const [showAddModal, setShowAddModal] = useState(false);
 
-        const lastWeek = history[0];
-        setHistoryProjectIds(Object.keys(lastWeek?.allocations ?? {}));
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Klarte ikke å hente prosjekter.');
-      } finally {
-        setLoading(false);
-      }
-    };
+  const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
+  const visibleSet = useMemo(() => new Set(visibleProjectIds), [visibleProjectIds]);
 
-    void load();
-  }, [userId]);
+  const availableProjects = useMemo(
+    () => projects.filter((project) => !visibleSet.has(project.id)),
+    [projects, visibleSet],
+  );
 
-  const selectedSet = useMemo(() => new Set(selectedProjectIds), [selectedProjectIds]);
+  const activeCount = useMemo(
+    () => visibleProjectIds.filter((projectId) => (sliderValues[projectId] ?? 0) > 0).length,
+    [sliderValues, visibleProjectIds],
+  );
 
-  const toggle = (projectId: string) => {
-    if (selectedSet.has(projectId)) {
-      onChange(selectedProjectIds.filter((id) => id !== projectId));
-      return;
-    }
+  const summaryText = totalSliderValue > 0
+    ? `Totalt ~37.5t fordelt på ${activeCount} ${activeCount === 1 ? 'prosjekt' : 'prosjekter'}`
+    : 'Totalt ~0t';
 
-    onChange([...selectedProjectIds, projectId]);
+  const handleCreateProject = async (input: { name: string; color: string }) => {
+    const created = await createProject(input);
+    onProjectCreated(created);
+    onAddProject(created.id, true);
+    setShowAddModal(false);
+    setAddOpen(false);
   };
 
   return (
-    <section>
-      <h3 className="mb-2 font-medium">Prosjekter</h3>
-      <div className="space-y-2 rounded-lg border border-slate-200 p-3">
-        {loading
-          ? Array.from({ length: 4 }).map((_, index) => (
-              <div className="h-8 animate-pulse rounded-md bg-gray-200" key={`skeleton-${index}`} />
-            ))
-          : projects.map((project) => (
-              <label className="flex items-center gap-2 text-sm" key={project.id}>
-                <input
-                  checked={selectedSet.has(project.id)}
-                  onChange={() => toggle(project.id)}
-                  type="checkbox"
-                />
-                <span aria-hidden className={`inline-block h-2.5 w-2.5 rounded-full ${colorClass(project.color)}`} />
-                <span>{project.name}</span>
-                {historyProjectIds.includes(project.id) ? (
-                  <span className="ml-auto rounded bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">Forrige uke</span>
-                ) : null}
-              </label>
-            ))}
+    <section className="space-y-3">
+      <div className="space-y-2">
+        {visibleProjectIds.map((projectId) => {
+          const project = projectById.get(projectId);
+          if (!project) return null;
+
+          const value = sliderValues[projectId] ?? 0;
+          const isMuted = value === 0;
+          const hours = totalSliderValue > 0 ? roundToOneDecimal((value / totalSliderValue) * 37.5) : null;
+
+          return (
+            <article
+              className={`relative rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              key={project.id}
+            >
+              {removableProjectIds.has(project.id) ? (
+                <button
+                  aria-label={`Fjern ${project.name}`}
+                  className="absolute right-2 top-2 rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                  onClick={() => onRemoveProject(project.id)}
+                  type="button"
+                >
+                  ✕
+                </button>
+              ) : null}
+
+              <div className="mb-2 flex items-center gap-2 pr-8">
+                <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
+                <p className="truncate text-sm font-medium text-slate-800">{project.name}</p>
+                <p className="ml-auto text-sm text-slate-500">{hours === null ? '—' : `~${hours}t`}</p>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <div className="relative h-9 flex-1">
+                  <div className="absolute inset-0 rounded-full bg-slate-100" />
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: `${(value / 5) * 100}%`,
+                      backgroundColor: project.color,
+                      opacity: 0.85,
+                    }}
+                  />
+                  <input
+                    aria-label={`${project.name} slider`}
+                    className="absolute inset-0 z-10 h-9 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md [&::-webkit-slider-runnable-track]:h-9 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-slate-200 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
+                    max={5}
+                    min={0}
+                    onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
+                    step={0.5}
+                    type="range"
+                    value={value}
+                  />
+                </div>
+                <span className="w-8 text-right text-xs text-slate-500">{value.toFixed(1)}</span>
+              </div>
+            </article>
+          );
+        })}
       </div>
-      {error ? <p className="mt-2 text-sm text-red-600">{error}</p> : null}
+
+      <div className="relative">
+        <button
+          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          onClick={() => setAddOpen((current) => !current)}
+          type="button"
+        >
+          + Legg til prosjekt
+        </button>
+
+        {addOpen ? (
+          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+            <div className="max-h-52 overflow-y-auto">
+              {availableProjects.length === 0 ? (
+                <p className="px-2 py-2 text-sm text-slate-500">Ingen flere aktive prosjekter.</p>
+              ) : (
+                availableProjects.map((project) => (
+                  <button
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-50"
+                    key={project.id}
+                    onClick={() => {
+                      onAddProject(project.id, true);
+                      setAddOpen(false);
+                    }}
+                    type="button"
+                  >
+                    <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
+                    <span>{project.name}</span>
+                  </button>
+                ))
+              )}
+            </div>
+            <button
+              className="mt-2 w-full rounded-md border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+              onClick={() => {
+                setShowAddModal(true);
+                setAddOpen(false);
+              }}
+              type="button"
+            >
+              Opprett nytt prosjekt
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      <p className="text-sm text-slate-500">{summaryText}</p>
+
+      {showAddModal ? (
+        <AddProjectModal
+          existingProjects={projects}
+          onClose={() => setShowAddModal(false)}
+          onSubmit={handleCreateProject}
+        />
+      ) : null}
     </section>
   );
 }
