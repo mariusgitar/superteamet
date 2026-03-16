@@ -2,7 +2,7 @@ import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
 import { getProjects, upsertEntry } from '../lib/api';
 import { formatWeekLabel } from '../lib/utils';
-import type { EntryType, Project } from '../types';
+import type { EntryType, Project, WeekEntry } from '../types';
 import { ProjectSelector } from './ProjectSelector';
 import { TotalIndicator } from './TotalIndicator';
 import { VerticalSlider } from './VerticalSlider';
@@ -11,6 +11,9 @@ interface EntryFormProps {
   userId: string;
   weekStart: string;
   type: EntryType;
+  title?: string;
+  existingPlan?: WeekEntry | null;
+  onSubmitted?: () => void | Promise<void>;
 }
 
 function distributeEvenly(ids: string[]): Record<string, number> {
@@ -92,7 +95,7 @@ function redistributeAllocations(
   return next;
 }
 
-export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
+export function EntryForm({ userId, weekStart, type, title, existingPlan = null, onSubmitted }: EntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [allocations, setAllocations] = useState<Record<string, number>>({});
@@ -108,6 +111,16 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
 
     void loadProjects();
   }, []);
+
+  useEffect(() => {
+    if (type === 'actual' && existingPlan) {
+      const projectIds = Object.keys(existingPlan.allocations);
+      setSelectedProjectIds(projectIds);
+      setAllocations(existingPlan.allocations);
+      setLockedProjectIds({});
+      setBlockedProjectId(null);
+    }
+  }, [type, existingPlan]);
 
   const total = useMemo(() => Object.values(allocations).reduce((sum, value) => sum + value, 0), [allocations]);
   const projectById = useMemo(() => new Map(projects.map((project) => [project.id, project])), [projects]);
@@ -154,24 +167,43 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
     setAllocations(distributeEvenly(selectedProjectIds));
   };
 
-  const handleSubmit = async () => {
-    if (total !== 100 || selectedProjectIds.length === 0) return;
-
+  const submitEntry = async (submissionAllocations: Record<string, number>) => {
     setSubmitting(true);
     setSuccessMessage(null);
     try {
-      const payloadType: EntryType = 'plan';
-      await upsertEntry({ userId, weekStart, type: payloadType, allocations });
+      await upsertEntry({ userId, weekStart, type, allocations: submissionAllocations });
       void confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-      setSuccessMessage(`Plan lagret for uke ${formatWeekLabel(weekStart)} 🎉`);
+      setSuccessMessage(`${type === 'plan' ? 'Plan' : 'Faktisk tid'} lagret for uke ${formatWeekLabel(weekStart)} 🎉`);
+      await onSubmitted?.();
     } finally {
       setSubmitting(false);
     }
   };
 
+  const handleSubmit = async () => {
+    if (total !== 100 || selectedProjectIds.length === 0) return;
+    await submitEntry(allocations);
+  };
+
+  const handleSubmitAsPlanned = async () => {
+    if (!existingPlan) return;
+    await submitEntry(existingPlan.allocations);
+  };
+
   return (
     <section className="space-y-4 rounded-lg bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold">Registrer {type === 'plan' ? 'plan' : 'faktisk tid'}</h2>
+      <h2 className="text-xl font-semibold">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
+
+      {type === 'actual' && existingPlan ? (
+        <button
+          className="w-full rounded-md border border-indigo-600 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-40"
+          disabled={submitting}
+          onClick={() => void handleSubmitAsPlanned()}
+          type="button"
+        >
+          Lever som planlagt
+        </button>
+      ) : null}
 
       <ProjectSelector
         onChange={handleProjectChange}
@@ -222,7 +254,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
         onClick={() => void handleSubmit()}
         type="button"
       >
-        {submitting ? 'Sender...' : 'Lagre plan'}
+        {submitting ? 'Sender...' : type === 'plan' ? 'Lagre plan' : 'Lagre faktisk tid'}
       </button>
     </section>
   );

@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { EntryForm } from './components/EntryForm';
 import { UserSelect } from './components/UserSelect';
 import { WeekNav } from './components/WeekNav';
+import { WeekView } from './components/WeekView';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { weekStart } from './lib/utils';
 
@@ -22,7 +22,7 @@ export default function App() {
         </header>
 
         <WeekNav currentWeekStart={currentWeekStart} onChangeWeek={setCurrentWeekStart} />
-        <EntryForm type="plan" userId={user.id} weekStart={currentWeekStart} />
+        <WeekView currentWeekStart={currentWeekStart} user={user} />
       </div>
     </main>
   );
