@@ -1,7 +1,7 @@
 import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
-import { getProjects, upsertEntry } from '../lib/api';
-import { formatWeekLabel } from '../lib/utils';
+import { getProjects, getRecentEntries, upsertEntry } from '../lib/api';
+import { calculateStreak, formatWeekLabel } from '../lib/utils';
 import type { EntryType, Project, WeekEntry } from '../types';
 import { ProjectSelector } from './ProjectSelector';
 import { TotalIndicator } from './TotalIndicator';
@@ -14,6 +14,7 @@ interface EntryFormProps {
   title?: string;
   existingPlan?: WeekEntry | null;
   onSubmitted?: () => void | Promise<void>;
+  onStreakMilestone?: (streak: number) => void;
 }
 
 function distributeEvenly(ids: string[]): Record<string, number> {
@@ -95,7 +96,15 @@ function redistributeAllocations(
   return next;
 }
 
-export function EntryForm({ userId, weekStart, type, title, existingPlan = null, onSubmitted }: EntryFormProps) {
+export function EntryForm({
+  userId,
+  weekStart,
+  type,
+  title,
+  existingPlan = null,
+  onSubmitted,
+  onStreakMilestone,
+}: EntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [allocations, setAllocations] = useState<Record<string, number>>({});
@@ -174,6 +183,15 @@ export function EntryForm({ userId, weekStart, type, title, existingPlan = null,
       await upsertEntry({ userId, weekStart, type, allocations: submissionAllocations });
       void confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
       setSuccessMessage(`${type === 'plan' ? 'Plan' : 'Faktisk tid'} lagret for uke ${formatWeekLabel(weekStart)} 🎉`);
+
+      if (type === 'actual' && onStreakMilestone) {
+        const entries = await getRecentEntries(userId, 20);
+        const streak = calculateStreak(entries, weekStart);
+        if (streak > 0 && streak % 4 === 0) {
+          onStreakMilestone(streak);
+        }
+      }
+
       await onSubmitted?.();
     } finally {
       setSubmitting(false);
@@ -211,22 +229,23 @@ export function EntryForm({ userId, weekStart, type, title, existingPlan = null,
         userId={userId}
       />
 
-      <div className="overflow-x-auto">
-        <div className="flex min-w-fit justify-center gap-4 pb-2">
+      <div className="overflow-x-auto pb-1">
+        <div className="flex min-w-fit justify-start gap-4 sm:justify-center">
           {selectedProjectIds.map((projectId) => {
             const project = projectById.get(projectId);
             return (
-              <VerticalSlider
-                key={projectId}
-                blocked={blockedProjectId === projectId}
-                color={project?.color ?? '#6366F1'}
-                disabled={selectedProjectIds.length === 1}
-                locked={Boolean(lockedProjectIds[projectId])}
-                onChange={(value) => handleSliderChange(projectId, value)}
-                onToggleLock={() => handleToggleLock(projectId)}
-                projectName={project?.name ?? 'Prosjekt'}
-                value={allocations[projectId] ?? 0}
-              />
+              <div className="min-w-[96px] shrink-0" key={projectId}>
+                <VerticalSlider
+                  blocked={blockedProjectId === projectId}
+                  color={project?.color ?? '#6366F1'}
+                  disabled={selectedProjectIds.length === 1}
+                  locked={Boolean(lockedProjectIds[projectId])}
+                  onChange={(value) => handleSliderChange(projectId, value)}
+                  onToggleLock={() => handleToggleLock(projectId)}
+                  projectName={project?.name ?? 'Prosjekt'}
+                  value={allocations[projectId] ?? 0}
+                />
+              </div>
             );
           })}
         </div>

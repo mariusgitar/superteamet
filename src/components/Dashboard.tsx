@@ -70,7 +70,30 @@ export function Dashboard() {
   const insights = useMemo(() => buildInsights(aggregatedWeeks, dashboard.projects), [aggregatedWeeks, dashboard.projects]);
 
   if (loading) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-sm">Laster dashboard...</p>;
+    return (
+      <section className="space-y-4">
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="h-8 w-full animate-pulse rounded bg-gray-200" />
+        </div>
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
+          <div className="space-y-2">
+            <div className="h-10 animate-pulse rounded bg-gray-200" />
+            <div className="h-10 animate-pulse rounded bg-gray-200" />
+            <div className="h-10 animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+        <div className="rounded-lg bg-white p-4 shadow-sm">
+          <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
+          <div className="space-y-2">
+            <div className="h-8 animate-pulse rounded bg-gray-200" />
+            <div className="h-8 animate-pulse rounded bg-gray-200" />
+            <div className="h-8 animate-pulse rounded bg-gray-200" />
+            <div className="h-8 animate-pulse rounded bg-gray-200" />
+          </div>
+        </div>
+      </section>
+    );
   }
 
   if (error) {
