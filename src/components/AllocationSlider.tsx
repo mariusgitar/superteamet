@@ -16,6 +16,7 @@ export function AllocationSlider({ label, value, onChange }: AllocationSliderPro
         max={100}
         min={0}
         onChange={(event) => onChange(Number(event.target.value))}
+        step={1}
         type="range"
         value={Math.round(value)}
       />
