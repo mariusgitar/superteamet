@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import sql from './_db';
+import sql from './_db.js';
 
 interface UserRow {
   id: string;
