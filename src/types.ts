@@ -32,6 +32,4 @@ export interface DashboardResponse {
   weeks: string[];
   projects: Project[];
   entries: WeekEntry[];
-  allEntries: WeekEntry[];
-  users: User[];
 }

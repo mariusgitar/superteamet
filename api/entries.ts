@@ -66,25 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
       }
 
-      if (type === 'actual') {
-        const rows = await sql<EntryRow[]>`
-          SELECT id, user_id, week_start, type, allocations, submitted_at
-          FROM week_entries
-          WHERE user_id = ${userId} AND type = 'actual'
-          ORDER BY week_start DESC, submitted_at DESC
-        `;
-
-        return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
-      }
-
-      const rows = await sql<EntryRow[]>`
-        SELECT id, user_id, week_start, type, allocations, submitted_at
-        FROM week_entries
-        WHERE user_id = ${userId}
-        ORDER BY week_start DESC, submitted_at DESC
-      `;
-
-      return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
+      return res.status(400).json({ error: 'weekStart or limit query is required' });
     }
 
     if (req.method === 'POST') {
