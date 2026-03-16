@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Dashboard } from './components/Dashboard';
 import { ProjectAdmin } from './components/ProjectAdmin';
 import { UserSelect } from './components/UserSelect';
 import { WeekNav } from './components/WeekNav';
@@ -6,10 +7,12 @@ import { WeekView } from './components/WeekView';
 import { useCurrentUser } from './hooks/useCurrentUser';
 import { weekStart } from './lib/utils';
 
+type AppView = 'week' | 'dashboard' | 'admin';
+
 export default function App() {
   const { user, saveUser } = useCurrentUser();
   const [currentWeekStart, setCurrentWeekStart] = useState(weekStart());
-  const [showProjectAdmin, setShowProjectAdmin] = useState(false);
+  const [view, setView] = useState<AppView>('week');
 
   if (!user) {
     return <UserSelect onSelect={saveUser} />;
@@ -17,40 +20,64 @@ export default function App() {
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-8">
-      <div className="mx-auto max-w-2xl">
+      <div className="mx-auto max-w-5xl">
         <header className="mb-4">
           <h1 className="text-2xl font-semibold">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-sm text-slate-600">Hei, {user.name}</p>
-            {!showProjectAdmin ? (
-              <button
-                className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
-                onClick={() => setShowProjectAdmin(true)}
-                type="button"
-              >
-                Administrer prosjekter
-              </button>
+            {view === 'week' ? (
+              <div className="flex items-center gap-3">
+                <button
+                  className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                  onClick={() => setView('dashboard')}
+                  type="button"
+                >
+                  Dashboard
+                </button>
+                <button
+                  className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                  onClick={() => setView('admin')}
+                  type="button"
+                >
+                  Administrer prosjekter
+                </button>
+              </div>
             ) : null}
           </div>
         </header>
 
-        {showProjectAdmin ? (
+        {view === 'week' ? (
+          <>
+            <WeekNav currentWeekStart={currentWeekStart} onChangeWeek={setCurrentWeekStart} />
+            <WeekView currentWeekStart={currentWeekStart} user={user} />
+          </>
+        ) : null}
+
+        {view === 'admin' ? (
           <>
             <button
               className="mb-3 text-sm text-slate-600 hover:text-slate-900"
-              onClick={() => setShowProjectAdmin(false)}
+              onClick={() => setView('week')}
               type="button"
             >
               ← Tilbake
             </button>
             <ProjectAdmin />
           </>
-        ) : (
+        ) : null}
+
+        {view === 'dashboard' ? (
           <>
-            <WeekNav currentWeekStart={currentWeekStart} onChangeWeek={setCurrentWeekStart} />
-            <WeekView currentWeekStart={currentWeekStart} user={user} />
+            <button
+              className="mb-3 text-sm text-slate-600 hover:text-slate-900"
+              onClick={() => setView('week')}
+              type="button"
+            >
+              ← Tilbake
+            </button>
+            <Dashboard />
           </>
-        )}
+        ) : null}
       </div>
     </main>
   );
