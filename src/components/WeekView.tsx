@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatWeekLabel, weekStart } from '../lib/utils';
-import type { EntryType, User, WeekEntriesResponse } from '../types';
-import { getWeekEntries } from '../lib/api';
+import { getDashboard, getWeekEntries } from '../lib/api';
+import { accuracyScore, formatWeekLabel, weekStart } from '../lib/utils';
+import type { DashboardResponse, EntryType, User, WeekEntriesResponse } from '../types';
 import { AccuracyCard } from './AccuracyCard';
 import { EntryForm } from './EntryForm';
 
@@ -36,8 +36,69 @@ function ActionButton({ title, subtitle, onClick, submitted = false }: ActionBut
   );
 }
 
+function WeeklyRecap({ dashboard }: { dashboard: DashboardResponse }) {
+  const actualEntries = dashboard.allEntries.filter((entry) => entry.type === 'actual');
+
+  if (actualEntries.length < 2) {
+    return null;
+  }
+
+  const projectTotals = new Map<string, number>();
+  for (const entry of actualEntries) {
+    for (const [projectId, value] of Object.entries(entry.allocations)) {
+      projectTotals.set(projectId, (projectTotals.get(projectId) ?? 0) + value);
+    }
+  }
+
+  const topProjectId = [...projectTotals.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topProject = dashboard.projects.find((project) => project.id === topProjectId);
+  const averageTime = topProjectId ? Math.round((projectTotals.get(topProjectId) ?? 0) / actualEntries.length) : 0;
+
+  const bestAccuracyRows = dashboard.users
+    .map((person) => {
+      const plan = dashboard.allEntries.find((entry) => entry.userId === person.id && entry.type === 'plan');
+      const actual = dashboard.allEntries.find((entry) => entry.userId === person.id && entry.type === 'actual');
+
+      if (!plan || !actual) {
+        return null;
+      }
+
+      return {
+        name: person.name,
+        score: accuracyScore(plan.allocations, actual.allocations),
+      };
+    })
+    .filter((row): row is { name: string; score: number } => row !== null)
+    .sort((a, b) => b.score - a.score);
+
+  const bestAccuracy = bestAccuracyRows[0] ?? null;
+  const submittedCount = new Set(actualEntries.map((entry) => entry.userId)).size;
+  const totalUsers = dashboard.users.length;
+  const filledSegments = totalUsers > 0 ? Math.round((submittedCount / totalUsers) * 10) : 0;
+
+  return (
+    <section className="rounded-xl bg-blue-50 p-4">
+      <h3 className="mb-3 text-base font-medium text-slate-800">Ukens oppsummering 📋</h3>
+      <div className="space-y-2 text-sm text-slate-700">
+        <p>📌 Teamet brukte mest tid på {topProject?.name ?? 'ukjent prosjekt'} denne uka (snitt ca. {averageTime}t)</p>
+        {bestAccuracy ? <p>🎯 {bestAccuracy.name} var mest treffsikker denne uka ({bestAccuracy.score}%)</p> : null}
+        <p>👥 {submittedCount} av {totalUsers} teammedlemmer har registrert uka</p>
+      </div>
+      <div className="mt-3 grid grid-cols-10 gap-1">
+        {Array.from({ length: 10 }, (_, index) => (
+          <div
+            className={`h-2 rounded-full ${index < filledSegments ? 'bg-blue-500' : 'bg-blue-100'}`}
+            key={`segment-${index + 1}`}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekViewProps) {
   const [entries, setEntries] = useState<WeekEntriesResponse>({ plan: null, actual: null });
+  const [weekDashboard, setWeekDashboard] = useState<DashboardResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeForm, setActiveForm] = useState<EntryType | null>(null);
@@ -46,7 +107,15 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
     try {
       setLoading(true);
       setError(null);
-      setEntries(await getWeekEntries(user.id, currentWeekStart));
+      const weekEntries = await getWeekEntries(user.id, currentWeekStart);
+      setEntries(weekEntries);
+
+      if (currentWeekStart === weekStart() && weekEntries.actual) {
+        const recapDashboard = await getDashboard(1, currentWeekStart);
+        setWeekDashboard(recapDashboard);
+      } else {
+        setWeekDashboard(null);
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Klarte ikke å hente ukeinnslag.');
     } finally {
@@ -143,6 +212,7 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           plan={entries.plan}
           userId={user.id}
         />
+        {weekDashboard ? <WeeklyRecap dashboard={weekDashboard} /> : null}
         <div className="text-center text-sm text-slate-600">
           <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
             Juster ukesplan
