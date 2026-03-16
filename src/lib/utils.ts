@@ -1,0 +1,56 @@
+import type { Project, WeekEntry } from '../types';
+
+export function weekStart(date: Date = new Date()): string {
+  const d = new Date(date);
+  const day = d.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  d.setDate(d.getDate() + diff);
+  return d.toISOString().split('T')[0];
+}
+
+export function sortProjects(projects: Project[], history: WeekEntry[]): Project[] {
+  if (history.length === 0) {
+    return [...projects].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+  }
+
+  const lastWeekUsed = new Set(Object.keys(history[0]?.allocations ?? {}));
+  const freq = new Map<string, number>();
+
+  for (const entry of history.slice(0, 5)) {
+    for (const projectId of Object.keys(entry.allocations)) {
+      freq.set(projectId, (freq.get(projectId) ?? 0) + 1);
+    }
+  }
+
+  const rank = (project: Project): number => {
+    if (lastWeekUsed.has(project.id)) return 0;
+    if ((freq.get(project.id) ?? 0) >= 3) return 1;
+    return 2;
+  };
+
+  return [...projects].sort((a, b) => {
+    const rankDiff = rank(a) - rank(b);
+    if (rankDiff !== 0) return rankDiff;
+    return a.name.localeCompare(b.name, 'nb');
+  });
+}
+
+export function formatWeekLabel(weekStartDate: string): string {
+  const start = new Date(`${weekStartDate}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 4);
+
+  const weekNo = isoWeek(start);
+  const monthFormatter = new Intl.DateTimeFormat('nb-NO', { month: 'long' });
+  const month = monthFormatter.format(end);
+
+  return `Uke ${weekNo} · ${start.getDate()}–${end.getDate()} ${month}`;
+}
+
+function isoWeek(date: Date): number {
+  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const day = tmp.getUTCDay() || 7;
+  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
+  return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+}
