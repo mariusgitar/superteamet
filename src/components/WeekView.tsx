@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatWeekLabel, weekStart } from '../lib/utils';
-import type { EntryType, User, WeekEntriesResponse } from '../types';
-import { getWeekEntries } from '../lib/api';
+import { getDashboard, getUsers, getWeekEntries } from '../lib/api';
+import { accuracyScore, formatWeekLabel, weekStart } from '../lib/utils';
+import type { DashboardResponse, EntryType, User, WeekEntriesResponse } from '../types';
 import { AccuracyCard } from './AccuracyCard';
 import { EntryForm } from './EntryForm';
 
@@ -16,6 +16,13 @@ interface ActionButtonProps {
   subtitle: string;
   onClick: () => void;
   submitted?: boolean;
+}
+
+interface WeeklyRecap {
+  topProjectLine: string;
+  bestAccuracyLine: string | null;
+  progressLine: string;
+  progressPercent: number;
 }
 
 function ActionButton({ title, subtitle, onClick, submitted = false }: ActionButtonProps) {
@@ -36,11 +43,82 @@ function ActionButton({ title, subtitle, onClick, submitted = false }: ActionBut
   );
 }
 
+function buildWeeklyRecap(data: DashboardResponse, users: User[]): WeeklyRecap | null {
+  const actualEntries = data.entries.filter((entry) => entry.type === 'actual');
+
+  if (actualEntries.length < 2) {
+    return null;
+  }
+
+  const projectTotals = new Map<string, number>();
+
+  for (const entry of actualEntries) {
+    for (const [projectId, allocation] of Object.entries(entry.allocations)) {
+      projectTotals.set(projectId, (projectTotals.get(projectId) ?? 0) + allocation);
+    }
+  }
+
+  const topProject = data.projects
+    .map((project) => ({
+      project,
+      avg: Math.round((projectTotals.get(project.id) ?? 0) / actualEntries.length),
+    }))
+    .sort((a, b) => b.avg - a.avg)[0];
+
+  if (!topProject) {
+    return null;
+  }
+
+  const userById = new Map(users.map((teamMember) => [teamMember.id, teamMember]));
+  const pairedByUser = new Map<string, { plan?: typeof actualEntries[number]; actual?: typeof actualEntries[number] }>();
+
+  for (const entry of data.pairedEntries) {
+    const current = pairedByUser.get(entry.userId) ?? {};
+
+    if (entry.type === 'plan') {
+      current.plan = entry;
+    } else {
+      current.actual = entry;
+    }
+
+    pairedByUser.set(entry.userId, current);
+  }
+
+  const bestMatch = [...pairedByUser.entries()]
+    .map(([userId, pair]) => {
+      if (!pair.plan || !pair.actual) {
+        return null;
+      }
+
+      return {
+        userId,
+        score: accuracyScore(pair.plan.allocations, pair.actual.allocations),
+      };
+    })
+    .filter((row): row is { userId: string; score: number } => row !== null)
+    .sort((a, b) => b.score - a.score)[0];
+
+  const completedUsers = new Set(actualEntries.map((entry) => entry.userId)).size;
+  const totalUsers = users.length;
+  const progressPercent = totalUsers > 0 ? Math.round((completedUsers / totalUsers) * 100) : 0;
+
+  return {
+    topProjectLine: `Teamet brukte mest tid på ${topProject.project.name} denne uka (snitt ca. ${topProject.avg}t)`,
+    bestAccuracyLine: bestMatch
+      ? `${userById.get(bestMatch.userId)?.name ?? 'En kollega'} var mest treffsikker denne uka (${bestMatch.score}%)`
+      : null,
+    progressLine: `${completedUsers} av ${totalUsers} teammedlemmer har registrert uka`,
+    progressPercent,
+  };
+}
+
 export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekViewProps) {
   const [entries, setEntries] = useState<WeekEntriesResponse>({ plan: null, actual: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeForm, setActiveForm] = useState<EntryType | null>(null);
+  const [weeklyDashboard, setWeeklyDashboard] = useState<DashboardResponse | null>(null);
+  const [teamUsers, setTeamUsers] = useState<User[]>([]);
 
   const loadEntries = async () => {
     try {
@@ -61,6 +139,43 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
   useEffect(() => {
     setActiveForm(null);
   }, [currentWeekStart, user.id]);
+
+  useEffect(() => {
+    const loadTeamUsers = async () => {
+      try {
+        setTeamUsers(await getUsers());
+      } catch {
+        setTeamUsers([]);
+      }
+    };
+
+    void loadTeamUsers();
+  }, []);
+
+  useEffect(() => {
+    if (!entries.actual || currentWeekStart !== weekStart()) {
+      setWeeklyDashboard(null);
+      return;
+    }
+
+    const loadWeeklyDashboard = async () => {
+      try {
+        setWeeklyDashboard(await getDashboard({ weekStart: currentWeekStart }));
+      } catch {
+        setWeeklyDashboard(null);
+      }
+    };
+
+    void loadWeeklyDashboard();
+  }, [entries.actual, currentWeekStart]);
+
+  const recap = useMemo(() => {
+    if (!weeklyDashboard) {
+      return null;
+    }
+
+    return buildWeeklyRecap(weeklyDashboard, teamUsers);
+  }, [teamUsers, weeklyDashboard]);
 
   const isTooFarInPastWithoutPlan = useMemo(() => {
     if (entries.plan) return false;
@@ -143,6 +258,21 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           plan={entries.plan}
           userId={user.id}
         />
+
+        {recap ? (
+          <section className="rounded-xl bg-blue-50 p-4">
+            <h3 className="mb-2 font-medium text-slate-900">Ukens oppsummering 📋</h3>
+            <ul className="space-y-2 text-sm text-slate-700">
+              <li>💡 {recap.topProjectLine}</li>
+              {recap.bestAccuracyLine ? <li>🎯 {recap.bestAccuracyLine}</li> : null}
+              <li>📈 {recap.progressLine}</li>
+            </ul>
+            <div className="mt-3">
+              <progress className="h-2 w-full overflow-hidden rounded-full accent-blue-500" max={100} value={recap.progressPercent} />
+            </div>
+          </section>
+        ) : null}
+
         <div className="text-center text-sm text-slate-600">
           <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
             Juster ukesplan

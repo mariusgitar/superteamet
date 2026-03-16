@@ -21,24 +21,38 @@ interface WeekRow {
   week_start: string;
 }
 
+interface DashboardQuery {
+  weeks?: string;
+  weekStart?: string;
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     if (req.method !== 'GET') {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const weeks = Number(req.query.weeks ?? '12');
-    const weekCount = Number.isInteger(weeks) && weeks > 0 ? weeks : 12;
+    const query = req.query as DashboardQuery;
+    const requestedWeekStart = query.weekStart ? String(query.weekStart) : undefined;
 
-    const rangeRows = await sql<WeekRow[]>`
-      SELECT DISTINCT week_start
-      FROM week_entries
-      WHERE type = 'actual'
-      ORDER BY week_start DESC
-      LIMIT ${weekCount}
-    `;
+    let weekValues: string[] = [];
 
-    const weekValues = rangeRows.map((row) => row.week_start).sort((a, b) => a.localeCompare(b));
+    if (requestedWeekStart) {
+      weekValues = [requestedWeekStart];
+    } else {
+      const weeks = Number(query.weeks ?? '12');
+      const weekCount = Number.isInteger(weeks) && weeks > 0 ? weeks : 12;
+
+      const rangeRows = await sql<WeekRow[]>`
+        SELECT DISTINCT week_start
+        FROM week_entries
+        WHERE type = 'actual'
+        ORDER BY week_start DESC
+        LIMIT ${weekCount}
+      `;
+
+      weekValues = rangeRows.map((row) => row.week_start).sort((a, b) => a.localeCompare(b));
+    }
 
     const projects = await sql<ProjectRow[]>`
       SELECT id, name, color, active
@@ -52,6 +66,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         weeks: [],
         projects,
         entries: [],
+        pairedEntries: [],
       });
     }
 
@@ -62,10 +77,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY week_start ASC, submitted_at ASC
     `;
 
+    const pairedEntries = await sql<EntryRow[]>`
+      SELECT id, user_id, week_start, type, allocations, submitted_at
+      FROM week_entries
+      WHERE week_start IN ${sql(weekValues)}
+      ORDER BY week_start ASC, submitted_at ASC
+    `;
+
     return res.status(200).json({
       weeks: weekValues,
       projects,
       entries: entries.map((row) => ({
+        id: row.id,
+        userId: row.user_id,
+        weekStart: row.week_start,
+        type: row.type,
+        allocations: row.allocations,
+        submittedAt: row.submitted_at,
+      })),
+      pairedEntries: pairedEntries.map((row) => ({
         id: row.id,
         userId: row.user_id,
         weekStart: row.week_start,
