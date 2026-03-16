@@ -35,110 +35,61 @@ function distributeEvenly(ids: string[]): Record<string, number> {
   return next;
 }
 
-function redistributeDecreaseRecursively(
-  values: Record<string, number>,
-  ids: string[],
-  decreaseBy: number,
-) {
-  if (decreaseBy <= 0 || ids.length === 0) return;
-
-  const total = ids.reduce((sum, id) => sum + (values[id] ?? 0), 0);
-  if (total <= 0) return;
-
-  let remainder = 0;
-  const stillPositive: string[] = [];
-
-  for (const id of ids) {
-    const current = values[id] ?? 0;
-    const nextValue = current - decreaseBy * (current / total);
-    if (nextValue < 0) {
-      values[id] = 0;
-      remainder += -nextValue;
-    } else {
-      values[id] = nextValue;
-      if (nextValue > 0) stillPositive.push(id);
-    }
-  }
-
-  if (remainder > 0) {
-    redistributeDecreaseRecursively(values, stillPositive, remainder);
-  }
-}
-
-function normalizeToHundred(values: Record<string, number>, ids: string[]): Record<string, number> {
-  const rounded = ids.reduce<Record<string, number>>((acc, id) => {
-    const clamped = Math.max(0, Math.min(100, values[id] ?? 0));
-    acc[id] = Math.round(clamped);
-    return acc;
-  }, {});
-
-  const sum = ids.reduce((total, id) => total + rounded[id], 0);
-  const remainder = 100 - sum;
-
-  if (remainder !== 0 && ids.length > 0) {
-    let targetId = ids[0];
-    for (const id of ids) {
-      if (rounded[id] > rounded[targetId]) {
-        targetId = id;
-      }
-    }
-
-    rounded[targetId] = Math.max(0, Math.min(100, rounded[targetId] + remainder));
-  }
-
-  return rounded;
-}
-
 function redistributeAllocations(
   current: Record<string, number>,
-  ids: string[],
+  selectedProjectIds: string[],
+  lockedProjectIds: Record<string, boolean>,
   projectId: string,
   requestedValue: number,
 ): Record<string, number> {
-  if (ids.length <= 1) {
-    return ids.length === 1 ? { [ids[0]]: 100 } : {};
-  }
+  const next = selectedProjectIds.reduce<Record<string, number>>((acc, id) => {
+    acc[id] = current[id] ?? 0;
+    return acc;
+  }, {});
+
+  if (lockedProjectIds[projectId]) return current;
 
   const roundedTarget = Math.max(0, Math.min(100, Math.round(requestedValue)));
   const currentValue = current[projectId] ?? 0;
   const delta = roundedTarget - currentValue;
   if (delta === 0) return current;
 
-  const next = ids.reduce<Record<string, number>>((acc, id) => {
-    acc[id] = current[id] ?? 0;
-    return acc;
-  }, {});
-  const otherIds = ids.filter((id) => id !== projectId);
-  const totalOthers = otherIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
+  const adjustableIds = selectedProjectIds.filter((id) => id !== projectId && !lockedProjectIds[id]);
+  if (adjustableIds.length === 0) return current;
 
-  if (delta > 0) {
-    if (totalOthers === 0) {
-      const evenDecrease = delta / otherIds.length;
-      for (const id of otherIds) {
-        next[id] = Math.max(0, (next[id] ?? 0) - evenDecrease);
-      }
-    } else {
-      redistributeDecreaseRecursively(next, otherIds, delta);
+  next[projectId] = roundedTarget;
+
+  const totalAdjustable = adjustableIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
+
+  if (totalAdjustable === 0) {
+    const share = Math.round(-delta / adjustableIds.length);
+    for (const id of adjustableIds) {
+      next[id] = Math.max(0, (next[id] ?? 0) + share);
     }
   } else {
-    const increaseBy = -delta;
-    if (totalOthers === 0) {
-      const evenIncrease = increaseBy / otherIds.length;
-      for (const id of otherIds) {
-        next[id] = (next[id] ?? 0) + evenIncrease;
-      }
-    } else {
-      for (const id of otherIds) {
-        const currentOther = next[id] ?? 0;
-        next[id] = currentOther - delta * (currentOther / totalOthers);
-      }
+    for (const id of adjustableIds) {
+      const value = next[id] ?? 0;
+      next[id] = Math.max(0, Math.min(100, Math.round(value - delta * (value / totalAdjustable))));
     }
   }
 
-  const updatedOthersTotal = otherIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
-  next[projectId] = Math.max(0, Math.min(100, 100 - updatedOthersTotal));
+  const lockedSum = selectedProjectIds
+    .filter((id) => lockedProjectIds[id])
+    .reduce((sum, id) => sum + (next[id] ?? 0), 0);
+  const adjustableSum = adjustableIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
+  const remainder = 100 - lockedSum - (next[projectId] ?? 0) - adjustableSum;
 
-  return normalizeToHundred(next, ids);
+  if (remainder !== 0) {
+    let highestAdjustableId = adjustableIds[0];
+    for (const id of adjustableIds) {
+      if ((next[id] ?? 0) > (next[highestAdjustableId] ?? 0)) {
+        highestAdjustableId = id;
+      }
+    }
+    next[highestAdjustableId] = Math.max(0, Math.min(100, (next[highestAdjustableId] ?? 0) + remainder));
+  }
+
+  return next;
 }
 
 export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
@@ -169,6 +120,11 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   };
 
   const handleSliderChange = (projectId: string, nextValue: number) => {
+    if (lockedProjectIds[projectId]) {
+      setBlockedProjectId(projectId);
+      return;
+    }
+
     const unlockedOthers = selectedProjectIds.filter((id) => id !== projectId && !lockedProjectIds[id]);
     if (unlockedOthers.length === 0) {
       setBlockedProjectId(projectId);
@@ -176,8 +132,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
     }
 
     setBlockedProjectId(null);
-    const eligibleIds = [projectId, ...unlockedOthers];
-    setAllocations((current) => redistributeAllocations(current, eligibleIds, projectId, nextValue));
+    setAllocations((current) => redistributeAllocations(current, selectedProjectIds, lockedProjectIds, projectId, nextValue));
   };
 
   const handleToggleLock = (projectId: string) => {
