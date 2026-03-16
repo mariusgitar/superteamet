@@ -53,7 +53,7 @@ export function getWeekEntries(userId: string, start: string): Promise<WeekEntri
 }
 
 export function getActualHistory(userId: string): Promise<WeekEntry[]> {
-  const query = new URLSearchParams({ userId, limit: '5', type: 'actual' }).toString();
+  const query = new URLSearchParams({ userId, limit: '20', type: 'actual' }).toString();
   return request<WeekEntry[]>(`/api/entries?${query}`);
 }
 

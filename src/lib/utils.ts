@@ -58,7 +58,7 @@ export function sortProjects(projects: Project[], history: WeekEntry[]): Project
   const lastWeekUsed = new Set(Object.keys(history[0]?.allocations ?? {}));
   const freq = new Map<string, number>();
 
-  for (const entry of history.slice(0, 5)) {
+  for (const entry of history) {
     for (const projectId of Object.keys(entry.allocations)) {
       freq.set(projectId, (freq.get(projectId) ?? 0) + 1);
     }

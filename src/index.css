@@ -1,1 +1,22 @@
 @import "tailwindcss";
+
+input[type='range'].touch-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  opacity: 0;
+  width: 44px;
+  height: 44px;
+}
+
+input[type='range'].touch-slider::-moz-range-thumb {
+  opacity: 0;
+  width: 44px;
+  height: 44px;
+}
+
+input[type='range'].touch-slider::-webkit-slider-runnable-track {
+  background: transparent;
+}
+
+input[type='range'].touch-slider::-moz-range-track {
+  background: transparent;
+}

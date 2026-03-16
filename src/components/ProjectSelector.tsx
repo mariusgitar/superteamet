@@ -104,7 +104,7 @@ export function ProjectSelector({
                   />
                   <input
                     aria-label={`${project.name} slider`}
-                    className="absolute inset-0 z-10 h-11 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:hidden [&::-webkit-slider-runnable-track]:h-11 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:hidden"
+                    className="touch-slider absolute left-0 top-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0"
                     max={5}
                     min={0}
                     onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
