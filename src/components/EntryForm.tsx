@@ -85,7 +85,8 @@ export function EntryForm({
 
       const sortedRecentIds = sortedProjects
         .map((project) => project.id)
-        .filter((projectId) => recentProjectIds.has(projectId));
+        .filter((projectId) => recentProjectIds.has(projectId))
+        .slice(0, 6);
 
       const lastWeekAllocations = history[0]?.allocations ?? {};
 

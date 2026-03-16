@@ -47,8 +47,8 @@ export function ProjectSelector({
   );
 
   const summaryText = totalSliderValue > 0
-    ? `Totalt ~37.5t fordelt på ${activeCount} ${activeCount === 1 ? 'prosjekt' : 'prosjekter'}`
-    : 'Totalt ~0t';
+    ? `Totalt ca. 37.5t fordelt på ${activeCount} ${activeCount === 1 ? 'prosjekt' : 'prosjekter'}`
+    : 'Totalt ca. 0t';
 
   const handleCreateProject = async (input: { name: string; color: string }) => {
     const created = await createProject(input);
@@ -88,14 +88,14 @@ export function ProjectSelector({
               <div className="mb-2 flex items-center gap-2 pr-8">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
                 <p className="truncate text-sm font-medium text-slate-800">{project.name}</p>
-                <p className="ml-auto text-sm text-slate-500">{hours === null ? '—' : `~${hours}t`}</p>
+                <p className="ml-auto text-sm text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="relative h-9 flex-1">
-                  <div className="absolute inset-0 rounded-full bg-slate-100" />
+                <div className="relative flex h-11 flex-1 items-center py-2">
+                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100" />
                   <div
-                    className="absolute inset-y-0 left-0 rounded-full"
+                    className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
                     style={{
                       width: `${(value / 5) * 100}%`,
                       backgroundColor: project.color,
@@ -104,7 +104,7 @@ export function ProjectSelector({
                   />
                   <input
                     aria-label={`${project.name} slider`}
-                    className="absolute inset-0 z-10 h-9 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-7 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:shadow-md [&::-webkit-slider-runnable-track]:h-9 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:-mt-1 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-7 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border [&::-webkit-slider-thumb]:border-slate-200 [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:shadow-md"
+                    className="absolute inset-0 z-10 h-11 w-full cursor-pointer appearance-none bg-transparent [&::-moz-range-thumb]:hidden [&::-webkit-slider-runnable-track]:h-11 [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:hidden"
                     max={5}
                     min={0}
                     onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
