@@ -6,7 +6,6 @@ interface VerticalSliderProps {
   blocked?: boolean;
   disabled?: boolean;
   onToggleLock: () => void;
-  onInteractionStart: () => void;
   onChange: (value: number) => void;
 }
 
@@ -18,7 +17,6 @@ export function VerticalSlider({
   blocked = false,
   disabled = false,
   onToggleLock,
-  onInteractionStart,
   onChange,
 }: VerticalSliderProps) {
   const bubbleStyle = {
@@ -30,12 +28,12 @@ export function VerticalSlider({
     <div className="flex min-w-16 flex-col items-center gap-2">
       <button
         aria-label={locked ? `Lås opp ${projectName}` : `Lås ${projectName}`}
-        className="text-base leading-none transition-colors"
+        className={`text-[12px] leading-none transition-opacity hover:opacity-70 ${locked ? 'text-gray-400 line-through' : ''}`}
         onClick={onToggleLock}
-        style={{ color: locked ? color : '#9CA3AF' }}
+        style={locked ? undefined : { color }}
         type="button"
       >
-        {locked ? '🔒' : '🔓'}
+        Lås
       </button>
 
       <div className="relative flex h-[220px] w-11 items-center justify-center">
@@ -56,9 +54,7 @@ export function VerticalSlider({
           disabled={disabled}
           max={100}
           min={0}
-          onMouseDown={onInteractionStart}
           onChange={(event) => onChange(Number(event.target.value))}
-          onTouchStart={onInteractionStart}
           step={1}
           type="range"
           value={value}
