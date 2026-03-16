@@ -1,0 +1,61 @@
+import type { EntryType, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
+
+const API_SECRET = import.meta.env.VITE_API_SECRET;
+
+async function request<T>(input: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(input, init);
+
+  if (!response.ok) {
+    const errorData = (await response.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(errorData?.error ?? `Request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
+
+export function getUsers(): Promise<User[]> {
+  return request<User[]>('/api/users');
+}
+
+export function createUser(name: string): Promise<User> {
+  return request<User>('/api/users', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-secret': API_SECRET,
+    },
+    body: JSON.stringify({ name }),
+  });
+}
+
+export function getProjects(): Promise<Project[]> {
+  return request<Project[]>('/api/projects');
+}
+
+export function getWeekEntries(userId: string, start: string): Promise<WeekEntriesResponse> {
+  const query = new URLSearchParams({ userId, weekStart: start }).toString();
+  return request<WeekEntriesResponse>(`/api/entries?${query}`);
+}
+
+export function getActualHistory(userId: string): Promise<WeekEntry[]> {
+  const query = new URLSearchParams({ userId, type: 'actual', limit: '5' }).toString();
+  return request<WeekEntry[]>(`/api/entries?${query}`);
+}
+
+interface UpsertEntryInput {
+  userId: string;
+  weekStart: string;
+  type: EntryType;
+  allocations: Record<string, number>;
+}
+
+export function upsertEntry(input: UpsertEntryInput): Promise<WeekEntry> {
+  return request<WeekEntry>('/api/entries', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-secret': API_SECRET,
+    },
+    body: JSON.stringify(input),
+  });
+}
