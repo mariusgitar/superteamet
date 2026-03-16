@@ -180,10 +180,6 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
     setAllocations((current) => redistributeAllocations(current, eligibleIds, projectId, nextValue));
   };
 
-  const handleSliderInteractionStart = (projectId: string) => {
-    setLockedProjectIds((current) => (current[projectId] ? current : { ...current, [projectId]: true }));
-  };
-
   const handleToggleLock = (projectId: string) => {
     setLockedProjectIds((current) => {
       if (current[projectId]) {
@@ -240,7 +236,6 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
                 disabled={selectedProjectIds.length === 1}
                 locked={Boolean(lockedProjectIds[projectId])}
                 onChange={(value) => handleSliderChange(projectId, value)}
-                onInteractionStart={() => handleSliderInteractionStart(projectId)}
                 onToggleLock={() => handleToggleLock(projectId)}
                 projectName={project?.name ?? 'Prosjekt'}
                 value={allocations[projectId] ?? 0}
