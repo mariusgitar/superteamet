@@ -42,19 +42,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
       }
 
-      if (type === 'actual' && limit) {
+      if (limit && Number.isInteger(limit) && limit > 0) {
+        if (type === 'actual') {
+          const rows = await sql<EntryRow[]>`
+            SELECT id, user_id, week_start, type, allocations, submitted_at
+            FROM week_entries
+            WHERE user_id = ${userId} AND type = 'actual'
+            ORDER BY week_start DESC, submitted_at DESC
+            LIMIT ${limit}
+          `;
+
+          return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
+        }
+
         const rows = await sql<EntryRow[]>`
           SELECT id, user_id, week_start, type, allocations, submitted_at
           FROM week_entries
-          WHERE user_id = ${userId} AND type = 'actual'
-          ORDER BY week_start DESC
+          WHERE user_id = ${userId}
+          ORDER BY week_start DESC, submitted_at DESC
           LIMIT ${limit}
         `;
 
         return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
       }
 
-      return res.status(400).json({ error: 'weekStart or type+limit query is required' });
+      return res.status(400).json({ error: 'weekStart or limit query is required' });
     }
 
     if (req.method === 'POST') {
