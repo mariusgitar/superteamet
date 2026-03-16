@@ -145,6 +145,8 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [allocations, setAllocations] = useState<Record<string, number>>({});
+  const [lockedProjectIds, setLockedProjectIds] = useState<Record<string, boolean>>({});
+  const [blockedProjectId, setBlockedProjectId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -162,10 +164,43 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
   const handleProjectChange = (nextProjectIds: string[]) => {
     setSelectedProjectIds(nextProjectIds);
     setAllocations(distributeEvenly(nextProjectIds));
+    setLockedProjectIds({});
+    setBlockedProjectId(null);
   };
 
   const handleSliderChange = (projectId: string, nextValue: number) => {
-    setAllocations((current) => redistributeAllocations(current, selectedProjectIds, projectId, nextValue));
+    const unlockedOthers = selectedProjectIds.filter((id) => id !== projectId && !lockedProjectIds[id]);
+    if (unlockedOthers.length === 0) {
+      setBlockedProjectId(projectId);
+      return;
+    }
+
+    setBlockedProjectId(null);
+    const eligibleIds = [projectId, ...unlockedOthers];
+    setAllocations((current) => redistributeAllocations(current, eligibleIds, projectId, nextValue));
+  };
+
+  const handleSliderInteractionStart = (projectId: string) => {
+    setLockedProjectIds((current) => (current[projectId] ? current : { ...current, [projectId]: true }));
+  };
+
+  const handleToggleLock = (projectId: string) => {
+    setLockedProjectIds((current) => {
+      if (current[projectId]) {
+        const next = { ...current };
+        delete next[projectId];
+        return next;
+      }
+
+      return { ...current, [projectId]: true };
+    });
+    setBlockedProjectId(null);
+  };
+
+  const handleResetLocks = () => {
+    setLockedProjectIds({});
+    setBlockedProjectId(null);
+    setAllocations(distributeEvenly(selectedProjectIds));
   };
 
   const handleSubmit = async () => {
@@ -200,9 +235,13 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
             return (
               <VerticalSlider
                 key={projectId}
+                blocked={blockedProjectId === projectId}
                 color={project?.color ?? '#6366F1'}
                 disabled={selectedProjectIds.length === 1}
+                locked={Boolean(lockedProjectIds[projectId])}
                 onChange={(value) => handleSliderChange(projectId, value)}
+                onInteractionStart={() => handleSliderInteractionStart(projectId)}
+                onToggleLock={() => handleToggleLock(projectId)}
                 projectName={project?.name ?? 'Prosjekt'}
                 value={allocations[projectId] ?? 0}
               />
@@ -210,6 +249,18 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
           })}
         </div>
       </div>
+
+      {selectedProjectIds.length > 0 ? (
+        <div className="-mt-1 flex justify-center">
+          <button
+            className="text-xs text-gray-500 underline-offset-2 hover:text-gray-700 hover:underline"
+            onClick={handleResetLocks}
+            type="button"
+          >
+            Nullstill låser
+          </button>
+        </div>
+      ) : null}
 
       <TotalIndicator total={total} />
 

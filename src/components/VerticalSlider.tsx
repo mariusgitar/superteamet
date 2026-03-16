@@ -2,11 +2,25 @@ interface VerticalSliderProps {
   projectName: string;
   color: string;
   value: number;
+  locked: boolean;
+  blocked?: boolean;
   disabled?: boolean;
+  onToggleLock: () => void;
+  onInteractionStart: () => void;
   onChange: (value: number) => void;
 }
 
-export function VerticalSlider({ projectName, color, value, disabled = false, onChange }: VerticalSliderProps) {
+export function VerticalSlider({
+  projectName,
+  color,
+  value,
+  locked,
+  blocked = false,
+  disabled = false,
+  onToggleLock,
+  onInteractionStart,
+  onChange,
+}: VerticalSliderProps) {
   const bubbleStyle = {
     bottom: `calc(${value}% - 0.5rem)`,
     backgroundColor: color,
@@ -14,8 +28,21 @@ export function VerticalSlider({ projectName, color, value, disabled = false, on
 
   return (
     <div className="flex min-w-16 flex-col items-center gap-2">
+      <button
+        aria-label={locked ? `Lås opp ${projectName}` : `Lås ${projectName}`}
+        className="text-base leading-none transition-colors"
+        onClick={onToggleLock}
+        style={{ color: locked ? color : '#9CA3AF' }}
+        type="button"
+      >
+        {locked ? '🔒' : '🔓'}
+      </button>
+
       <div className="relative flex h-[220px] w-11 items-center justify-center">
-        <div className="relative h-[200px] w-5 overflow-hidden rounded-full bg-gray-200">
+        <div
+          className="relative h-[200px] w-5 overflow-hidden rounded-full bg-gray-200"
+          style={{ border: locked ? `1px solid ${color}` : undefined }}
+        >
           <div className="absolute inset-x-0 bottom-0" style={{ backgroundColor: color, height: `${value}%`, opacity: 0.8 }} />
         </div>
 
@@ -25,11 +52,13 @@ export function VerticalSlider({ projectName, color, value, disabled = false, on
 
         <input
           aria-label={`${projectName} allokering`}
-          className="absolute h-11 w-[200px] -rotate-90 appearance-none bg-transparent disabled:cursor-not-allowed [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-0 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-white"
+          className={`absolute h-11 w-[200px] -rotate-90 appearance-none bg-transparent disabled:cursor-not-allowed [&::-moz-range-thumb]:h-7 [&::-moz-range-thumb]:w-6 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-white [&::-webkit-slider-runnable-track]:bg-transparent [&::-webkit-slider-thumb]:mt-0 [&::-webkit-slider-thumb]:h-7 [&::-webkit-slider-thumb]:w-6 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-white ${blocked ? 'cursor-not-allowed opacity-60' : ''}`}
           disabled={disabled}
           max={100}
           min={0}
+          onMouseDown={onInteractionStart}
           onChange={(event) => onChange(Number(event.target.value))}
+          onTouchStart={onInteractionStart}
           step={1}
           type="range"
           value={value}
