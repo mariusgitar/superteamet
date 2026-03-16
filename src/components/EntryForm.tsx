@@ -13,10 +13,10 @@ interface EntryFormProps {
   type: EntryType;
 }
 
-function distributeEvenlyInTens(ids: string[]): Record<string, number> {
+function distributeEvenly(ids: string[]): Record<string, number> {
   if (ids.length === 0) return {};
 
-  const base = Math.floor((100 / ids.length) / 10) * 10;
+  const base = Math.floor(100 / ids.length);
   let remainder = 100 - base * ids.length;
 
   const next = ids.reduce<Record<string, number>>((acc, id) => {
@@ -27,54 +27,66 @@ function distributeEvenlyInTens(ids: string[]): Record<string, number> {
   let idx = 0;
   while (remainder > 0) {
     const id = ids[idx % ids.length];
-    next[id] += 10;
-    remainder -= 10;
+    next[id] += 1;
+    remainder -= 1;
     idx += 1;
   }
 
   return next;
 }
 
-function transferFromHighestOther(
-  allocations: Record<string, number>,
+function redistributeDecreaseRecursively(
+  values: Record<string, number>,
   ids: string[],
-  selectedId: string,
-): string | null {
-  const candidates = ids.filter((id) => id !== selectedId);
-  if (candidates.length === 0) return null;
+  decreaseBy: number,
+) {
+  if (decreaseBy <= 0 || ids.length === 0) return;
 
-  let highestId: string | null = null;
-  let highestValue = -1;
-  for (const id of candidates) {
-    const value = allocations[id] ?? 0;
-    if (value > highestValue) {
-      highestValue = value;
-      highestId = id;
+  const total = ids.reduce((sum, id) => sum + (values[id] ?? 0), 0);
+  if (total <= 0) return;
+
+  let remainder = 0;
+  const stillPositive: string[] = [];
+
+  for (const id of ids) {
+    const current = values[id] ?? 0;
+    const nextValue = current - decreaseBy * (current / total);
+    if (nextValue < 0) {
+      values[id] = 0;
+      remainder += -nextValue;
+    } else {
+      values[id] = nextValue;
+      if (nextValue > 0) stillPositive.push(id);
     }
   }
 
-  return highestValue > 0 ? highestId : null;
+  if (remainder > 0) {
+    redistributeDecreaseRecursively(values, stillPositive, remainder);
+  }
 }
 
-function transferToLowestOther(
-  allocations: Record<string, number>,
-  ids: string[],
-  selectedId: string,
-): string | null {
-  const candidates = ids.filter((id) => id !== selectedId);
-  if (candidates.length === 0) return null;
+function normalizeToHundred(values: Record<string, number>, ids: string[]): Record<string, number> {
+  const rounded = ids.reduce<Record<string, number>>((acc, id) => {
+    const clamped = Math.max(0, Math.min(100, values[id] ?? 0));
+    acc[id] = Math.round(clamped);
+    return acc;
+  }, {});
 
-  let lowestId: string | null = null;
-  let lowestValue = Number.POSITIVE_INFINITY;
-  for (const id of candidates) {
-    const value = allocations[id] ?? 0;
-    if (value < lowestValue) {
-      lowestValue = value;
-      lowestId = id;
+  const sum = ids.reduce((total, id) => total + rounded[id], 0);
+  const remainder = 100 - sum;
+
+  if (remainder !== 0 && ids.length > 0) {
+    let targetId = ids[0];
+    for (const id of ids) {
+      if (rounded[id] > rounded[targetId]) {
+        targetId = id;
+      }
     }
+
+    rounded[targetId] = Math.max(0, Math.min(100, rounded[targetId] + remainder));
   }
 
-  return lowestId;
+  return rounded;
 }
 
 function redistributeAllocations(
@@ -87,35 +99,46 @@ function redistributeAllocations(
     return ids.length === 1 ? { [ids[0]]: 100 } : {};
   }
 
-  const roundedTarget = Math.max(0, Math.min(100, Math.round(requestedValue / 10) * 10));
+  const roundedTarget = Math.max(0, Math.min(100, Math.round(requestedValue)));
   const currentValue = current[projectId] ?? 0;
   const delta = roundedTarget - currentValue;
   if (delta === 0) return current;
 
-  const next = { ...current };
-  let remaining = Math.abs(delta);
+  const next = ids.reduce<Record<string, number>>((acc, id) => {
+    acc[id] = current[id] ?? 0;
+    return acc;
+  }, {});
+  const otherIds = ids.filter((id) => id !== projectId);
+  const totalOthers = otherIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
 
   if (delta > 0) {
-    while (remaining > 0) {
-      const donorId = transferFromHighestOther(next, ids, projectId);
-      if (!donorId) break;
-      const transfer = Math.min(10, remaining, next[donorId]);
-      next[donorId] -= transfer;
-      next[projectId] = (next[projectId] ?? 0) + transfer;
-      remaining -= transfer;
+    if (totalOthers === 0) {
+      const evenDecrease = delta / otherIds.length;
+      for (const id of otherIds) {
+        next[id] = Math.max(0, (next[id] ?? 0) - evenDecrease);
+      }
+    } else {
+      redistributeDecreaseRecursively(next, otherIds, delta);
     }
   } else {
-    while (remaining > 0 && (next[projectId] ?? 0) > 0) {
-      const receiverId = transferToLowestOther(next, ids, projectId);
-      if (!receiverId) break;
-      const transfer = Math.min(10, remaining, next[projectId]);
-      next[projectId] -= transfer;
-      next[receiverId] = (next[receiverId] ?? 0) + transfer;
-      remaining -= transfer;
+    const increaseBy = -delta;
+    if (totalOthers === 0) {
+      const evenIncrease = increaseBy / otherIds.length;
+      for (const id of otherIds) {
+        next[id] = (next[id] ?? 0) + evenIncrease;
+      }
+    } else {
+      for (const id of otherIds) {
+        const currentOther = next[id] ?? 0;
+        next[id] = currentOther - delta * (currentOther / totalOthers);
+      }
     }
   }
 
-  return next;
+  const updatedOthersTotal = otherIds.reduce((sum, id) => sum + (next[id] ?? 0), 0);
+  next[projectId] = Math.max(0, Math.min(100, 100 - updatedOthersTotal));
+
+  return normalizeToHundred(next, ids);
 }
 
 export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
@@ -138,7 +161,7 @@ export function EntryForm({ userId, weekStart, type }: EntryFormProps) {
 
   const handleProjectChange = (nextProjectIds: string[]) => {
     setSelectedProjectIds(nextProjectIds);
-    setAllocations(distributeEvenlyInTens(nextProjectIds));
+    setAllocations(distributeEvenly(nextProjectIds));
   };
 
   const handleSliderChange = (projectId: string, nextValue: number) => {

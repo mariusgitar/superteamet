@@ -30,7 +30,7 @@ export function VerticalSlider({ projectName, color, value, disabled = false, on
           max={100}
           min={0}
           onChange={(event) => onChange(Number(event.target.value))}
-          step={10}
+          step={1}
           type="range"
           value={value}
         />
