@@ -57,8 +57,8 @@ export function ProjectSelector({
   };
 
   return (
-    <section className="space-y-3">
-      <div className="space-y-2">
+    <section className="space-y-4">
+      <div className="space-y-3">
         {visibleProjectIds.map((projectId) => {
           const project = projectById.get(projectId);
           if (!project) return null;
@@ -69,27 +69,30 @@ export function ProjectSelector({
 
           return (
             <article
-              className={`relative rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              className={`relative rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
               <button
                 aria-label={`Fjern ${project.name}`}
-                className="absolute right-2 top-2 h-5 w-5 rounded-full bg-gray-100 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600"
+                className="absolute right-3 top-3 h-5 w-5 rounded-full bg-slate-100 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600"
                 onClick={() => onRemoveProject(project.id)}
                 type="button"
               >
                 ×
               </button>
 
-              <div className="mb-2 flex items-center gap-2 pr-8">
+              <div className="mb-3 flex items-center gap-2 pr-8">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
-                <p className="truncate text-sm font-medium text-slate-800">{project.name}</p>
-                <p className="ml-auto text-sm text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
+                <p className="truncate text-sm font-semibold text-slate-900">{project.name}</p>
+                <div className="ml-auto text-right">
+                  <p className="text-sm font-medium text-slate-700">{value.toFixed(1)}</p>
+                  <p className="text-xs text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="relative flex h-11 flex-1 items-center py-2">
-                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100" />
+                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100/90" />
                   <div
                     className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
                     style={{
@@ -104,7 +107,7 @@ export function ProjectSelector({
                     max={5}
                     min={0}
                     onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
-                    step={0.5}
+                    step={0.1}
                     type="range"
                     value={value}
                   />
@@ -117,7 +120,7 @@ export function ProjectSelector({
 
       <div className="relative">
         <button
-          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           onClick={() => setAddOpen((current) => !current)}
           type="button"
         >
@@ -125,7 +128,7 @@ export function ProjectSelector({
         </button>
 
         {addOpen ? (
-          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2.5 shadow-lg">
             <div className="max-h-52 overflow-y-auto">
               {availableProjects.length === 0 ? (
                 <p className="px-2 py-2 text-sm text-slate-500">Ingen flere aktive prosjekter.</p>

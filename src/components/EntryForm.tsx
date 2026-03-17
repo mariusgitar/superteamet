@@ -15,12 +15,12 @@ interface EntryFormProps {
   onStreakMilestone?: (streak: number) => void;
 }
 
-function clampToHalfStep(value: number): number {
-  return Math.max(0, Math.min(5, Math.round(value * 2) / 2));
+function clampToTenthStep(value: number): number {
+  return Math.max(0, Math.min(5, Math.round(value * 10) / 10));
 }
 
 function sliderValueFromPercent(percent: number): number {
-  return clampToHalfStep((percent / 100) * 5);
+  return clampToTenthStep((percent / 100) * 5);
 }
 
 function sliderMapToPercentages(values: Record<string, number>): Record<string, number> {
@@ -132,7 +132,7 @@ export function EntryForm({
   const canSubmit = Object.keys(allocations).length > 0;
 
   const handleSliderChange = (projectId: string, value: number) => {
-    setSliderValues((current) => ({ ...current, [projectId]: clampToHalfStep(value) }));
+    setSliderValues((current) => ({ ...current, [projectId]: clampToTenthStep(value) }));
   };
 
   const handleAddProject = (projectId: string) => {
@@ -192,12 +192,12 @@ export function EntryForm({
   };
 
   return (
-    <section className="space-y-4 rounded-lg bg-white p-5 shadow-sm">
-      <h2 className="text-xl font-semibold">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
+    <section className="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
 
       {type === 'actual' && existingPlan ? (
         <button
-          className="w-full rounded-md border border-indigo-600 px-4 py-2 font-medium text-indigo-700 hover:bg-indigo-50 disabled:opacity-40"
+          className="w-full rounded-lg border border-indigo-600 px-4 py-2.5 font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-40"
           disabled={submitting}
           onClick={() => void handleSubmitAsPlanned()}
           type="button"
@@ -217,10 +217,10 @@ export function EntryForm({
         visibleProjectIds={visibleProjectIds}
       />
 
-      {successMessage ? <p className="text-sm text-emerald-700">{successMessage}</p> : null}
+      {successMessage ? <p className="text-sm font-medium text-emerald-700">{successMessage}</p> : null}
 
       <button
-        className="w-full rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
         disabled={submitting}
         onClick={handleReset}
         type="button"
@@ -229,7 +229,7 @@ export function EntryForm({
       </button>
 
       <button
-        className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-40"
+        className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-40"
         disabled={submitting || !canSubmit}
         onClick={() => void handleSubmit()}
         type="button"
