@@ -103,14 +103,10 @@ function weekSpread(entries: WeekEntry[]): number {
 }
 
 function toWeekLabel(weekStartDate: string): string {
-  const date = new Date(`${weekStartDate}T00:00:00`);
-  return `Uke ${isoWeek(date)}`;
-}
-
-function isoWeek(date: Date): number {
-  const tmp = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  const day = tmp.getUTCDay() || 7;
-  tmp.setUTCDate(tmp.getUTCDate() + 4 - day);
-  const yearStart = new Date(Date.UTC(tmp.getUTCFullYear(), 0, 1));
-  return Math.ceil((((tmp.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  const date = new Date(`${weekStartDate}T12:00:00`);
+  const jan4 = new Date(date.getFullYear(), 0, 4);
+  const startOfWeek1 = new Date(jan4);
+  startOfWeek1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
+  const weekNum = Math.round((date.getTime() - startOfWeek1.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+  return `Uke ${weekNum}`;
 }

@@ -65,7 +65,7 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
   const isTooFarInPastWithoutPlan = useMemo(() => {
     if (entries.plan) return false;
     const thisWeek = weekStart();
-    const oneWeekAgo = new Date(`${thisWeek}T00:00:00`);
+    const oneWeekAgo = new Date(`${thisWeek}T12:00:00`);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
     const oneWeekAgoStart = weekStart(oneWeekAgo);
     return currentWeekStart < oneWeekAgoStart;
