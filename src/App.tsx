@@ -76,54 +76,52 @@ export default function App() {
           <h1 className="text-3xl font-semibold tracking-tight">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-sm text-slate-500">Hei, {user.name} ✨</p>
-            {view === 'week' ? (
-              <>
-                <div className="hidden items-center gap-3 sm:flex">
-                  <button
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
-                    onClick={() => switchView('dashboard')}
-                    type="button"
-                  >
-                    Dashboard
-                  </button>
-                  <button
-                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
-                    onClick={() => switchView('admin')}
-                    type="button"
-                  >
-                    Administrer prosjekter
-                  </button>
-                </div>
+            <>
+              <div className="hidden items-center gap-3 sm:flex">
+                <button
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                  onClick={() => switchView('dashboard')}
+                  type="button"
+                >
+                  Dashboard
+                </button>
+                <button
+                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                  onClick={() => switchView('admin')}
+                  type="button"
+                >
+                  Administrer prosjekter
+                </button>
+              </div>
 
-                <div className="relative sm:hidden">
-                  <button
-                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-lg text-slate-600 shadow-sm"
-                    onClick={() => setMobileMenuOpen((current) => !current)}
-                    type="button"
-                  >
-                    ≡
-                  </button>
-                  {mobileMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
-                      <button
-                        className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
-                        onClick={() => switchView('dashboard')}
-                        type="button"
-                      >
-                        Dashboard
-                      </button>
-                      <button
-                        className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
-                        onClick={() => switchView('admin')}
-                        type="button"
-                      >
-                        Administrer prosjekter
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-              </>
-            ) : null}
+              <div className="relative sm:hidden">
+                <button
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-lg text-slate-600 shadow-sm"
+                  onClick={() => setMobileMenuOpen((current) => !current)}
+                  type="button"
+                >
+                  ≡
+                </button>
+                {mobileMenuOpen ? (
+                  <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
+                    <button
+                      className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
+                      onClick={() => switchView('dashboard')}
+                      type="button"
+                    >
+                      Dashboard
+                    </button>
+                    <button
+                      className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
+                      onClick={() => switchView('admin')}
+                      type="button"
+                    >
+                      Administrer prosjekter
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </>
           </div>
         </header>
 
