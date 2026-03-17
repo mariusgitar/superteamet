@@ -33,3 +33,12 @@ export interface DashboardResponse {
   projects: Project[];
   entries: WeekEntry[];
 }
+
+export interface ExportRow {
+  week_start: string;
+  week_label: string;
+  user_name: string;
+  project_name: string;
+  percent: number;
+  hours: number;
+}
