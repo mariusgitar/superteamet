@@ -69,12 +69,12 @@ export function ProjectSelector({
 
           return (
             <article
-              className={`relative rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              className={`relative rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
               <button
                 aria-label={`Fjern ${project.name}`}
-                className="absolute right-3 top-3 h-5 w-5 rounded-full bg-slate-100 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600"
+                className="absolute right-3 top-3 h-6 w-6 rounded-full border border-slate-200 bg-white text-slate-400 transition hover:border-slate-300 hover:text-slate-600"
                 onClick={() => onRemoveProject(project.id)}
                 type="button"
               >
@@ -92,13 +92,13 @@ export function ProjectSelector({
 
               <div className="flex items-center gap-3">
                 <div className="relative flex h-11 flex-1 items-center py-2">
-                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100/90" />
+                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100" />
                   <div
                     className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
                     style={{
                       width: `${(value / 5) * 100}%`,
                       backgroundColor: project.color,
-                      opacity: 0.85,
+                      opacity: 0.8,
                     }}
                   />
                   <input
@@ -120,7 +120,7 @@ export function ProjectSelector({
 
       <div className="relative">
         <button
-          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          className="w-full rounded-xl border border-dashed border-indigo-200 bg-indigo-50/30 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-indigo-50/60"
           onClick={() => setAddOpen((current) => !current)}
           type="button"
         >
@@ -128,14 +128,14 @@ export function ProjectSelector({
         </button>
 
         {addOpen ? (
-          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2.5 shadow-lg">
+          <div className="absolute z-20 mt-2 w-full rounded-2xl border border-slate-200 bg-white/95 p-2.5 shadow-xl">
             <div className="max-h-52 overflow-y-auto">
               {availableProjects.length === 0 ? (
                 <p className="px-2 py-2 text-sm text-slate-500">Ingen flere aktive prosjekter.</p>
               ) : (
                 availableProjects.map((project) => (
                   <button
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition hover:bg-slate-50"
                     key={project.id}
                     onClick={() => {
                       onAddProject(project.id);
@@ -150,7 +150,7 @@ export function ProjectSelector({
               )}
             </div>
             <button
-              className="mt-2 w-full rounded-md border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+              className="mt-2 w-full rounded-lg border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 transition hover:bg-indigo-50"
               onClick={() => {
                 setShowAddModal(true);
                 setAddOpen(false);
@@ -163,7 +163,7 @@ export function ProjectSelector({
         ) : null}
       </div>
 
-      <p className="text-sm text-slate-500">{summaryText}</p>
+      <p className="rounded-xl border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-500">{summaryText}</p>
 
       {showAddModal ? (
         <AddProjectModal

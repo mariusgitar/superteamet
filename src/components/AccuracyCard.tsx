@@ -103,14 +103,14 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
   const streak = calculateStreak(recentEntries, currentWeekStart);
 
   return (
-    <section className="space-y-5 rounded-lg bg-white p-5 shadow-sm">
+    <section className="space-y-5 rounded-3xl border border-white/80 bg-white/85 p-5 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
       <div className="text-center">
-        <p className="text-sm font-medium text-slate-500">Treffscore</p>
+        <p className="text-sm font-medium uppercase tracking-[0.12em] text-slate-500">Treffscore</p>
         <p className="text-5xl font-bold text-indigo-600">{animatedScore}</p>
         <p className="mt-1 text-base text-slate-700">{scoreLabel(score)}</p>
       </div>
 
-      <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
+      <div className="rounded-2xl border border-orange-200 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
         🔥 {streak} uker på rad
       </div>
 
@@ -118,7 +118,7 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
         {comparisonRows.map((row) => {
           const color = colorClass(row.project?.color ?? '#6366F1');
           return (
-            <div className="rounded-md border border-slate-200 p-3" key={row.id}>
+            <div className="rounded-xl border border-slate-200 bg-white p-3" key={row.id}>
               <p className="mb-2 text-sm font-medium text-slate-800">{row.project?.name ?? 'Ukjent prosjekt'}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
