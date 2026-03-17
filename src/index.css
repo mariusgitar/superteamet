@@ -20,3 +20,18 @@ input[type='range'].touch-slider::-webkit-slider-runnable-track {
 input[type='range'].touch-slider::-moz-range-track {
   background: transparent;
 }
+
+@keyframes projectCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.project-card-enter {
+  animation: projectCardFadeIn 200ms ease-out;
+}

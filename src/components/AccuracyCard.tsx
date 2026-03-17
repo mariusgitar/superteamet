@@ -37,6 +37,13 @@ function scoreLabel(score: number): string {
   return 'Uka tok en annen retning';
 }
 
+
+function topBorderClass(score: number): string {
+  if (score >= 90) return 'border-t-[3px] border-t-emerald-400';
+  if (score >= 70) return 'border-t-[3px] border-t-indigo-400';
+  return 'border-t-[3px] border-t-amber-400';
+}
+
 export function AccuracyCard({ plan, actual, userId, currentWeekStart }: AccuracyCardProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentEntries, setRecentEntries] = useState<WeekEntry[]>([]);
@@ -103,14 +110,14 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
   const streak = calculateStreak(recentEntries, currentWeekStart);
 
   return (
-    <section className="space-y-5 rounded-lg bg-white p-5 shadow-sm">
+    <section className={`space-y-5 rounded-2xl bg-white p-5 shadow-sm ${topBorderClass(score)}`}>
       <div className="text-center">
-        <p className="text-sm font-medium text-slate-500">Treffscore</p>
+        <p className="text-sm text-gray-500">Treffscore</p>
         <p className="text-5xl font-bold text-indigo-600">{animatedScore}</p>
-        <p className="mt-1 text-base text-slate-700">{scoreLabel(score)}</p>
+        <p className="mt-1 text-sm text-gray-500">{scoreLabel(score)}</p>
       </div>
 
-      <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
+      <div className="rounded-2xl border border-orange-200 bg-orange-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
         🔥 {streak} uker på rad
       </div>
 
@@ -118,15 +125,15 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
         {comparisonRows.map((row) => {
           const color = colorClass(row.project?.color ?? '#6366F1');
           return (
-            <div className="rounded-md border border-slate-200 p-3" key={row.id}>
+            <div className="rounded-xl border border-slate-200 p-4 shadow-sm transition-shadow duration-200 hover:shadow-md" key={row.id}>
               <p className="mb-2 text-sm font-medium text-slate-800">{row.project?.name ?? 'Ukjent prosjekt'}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Plan {row.planned}%</p>
+                  <p className="mb-1 text-xs text-gray-400">Plan {row.planned}%</p>
                   <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.planned} />
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Fasit {row.actual}%</p>
+                  <p className="mb-1 text-xs text-gray-400">Fasit {row.actual}%</p>
                   <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.actual} />
                 </div>
               </div>

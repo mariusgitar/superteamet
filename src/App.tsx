@@ -72,22 +72,22 @@ export default function App() {
       ) : null}
 
       <div className="mx-auto max-w-5xl">
-        <header className="mb-4">
-          <h1 className="text-2xl font-semibold">Ukespeil</h1>
+        <header className="mb-4 border-b border-gray-100 pb-3">
+          <h1 className="text-xl font-bold">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
-            <p className="text-sm text-slate-600">Hei, {user.name}</p>
+            <p className="text-sm text-gray-400">Hei, {user.name}</p>
             {view === 'week' ? (
               <>
                 <div className="hidden items-center gap-3 sm:flex">
                   <button
-                    className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                    className="text-xs text-gray-400 underline-offset-2 transition-all duration-200 hover:text-slate-700 hover:underline"
                     onClick={() => switchView('dashboard')}
                     type="button"
                   >
                     Dashboard
                   </button>
                   <button
-                    className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                    className="text-xs text-gray-400 underline-offset-2 transition-all duration-200 hover:text-slate-700 hover:underline"
                     onClick={() => switchView('admin')}
                     type="button"
                   >
@@ -97,23 +97,23 @@ export default function App() {
 
                 <div className="relative sm:hidden">
                   <button
-                    className="flex h-11 w-11 items-center justify-center rounded-md border border-slate-300 bg-white text-lg text-slate-700"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 bg-white text-lg text-slate-700 transition-colors duration-150 hover:bg-gray-50"
                     onClick={() => setMobileMenuOpen((current) => !current)}
                     type="button"
                   >
                     ≡
                   </button>
                   {mobileMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-20 w-52 rounded-lg border border-slate-200 bg-white p-1 text-sm shadow-lg">
+                    <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white p-1 text-sm shadow-sm">
                       <button
-                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 hover:bg-slate-100"
+                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 transition-colors duration-150 hover:bg-gray-50"
                         onClick={() => switchView('dashboard')}
                         type="button"
                       >
                         Dashboard
                       </button>
                       <button
-                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 hover:bg-slate-100"
+                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 transition-colors duration-150 hover:bg-gray-50"
                         onClick={() => switchView('admin')}
                         type="button"
                       >
@@ -141,7 +141,7 @@ export default function App() {
         {view === 'admin' ? (
           <>
             <button
-              className="mb-3 text-sm text-slate-600 hover:text-slate-900"
+              className="mb-3 text-sm text-gray-400 transition-all duration-200 hover:text-slate-900"
               onClick={() => switchView('week')}
               type="button"
             >
@@ -154,7 +154,7 @@ export default function App() {
         {view === 'dashboard' ? (
           <>
             <button
-              className="mb-3 text-sm text-slate-600 hover:text-slate-900"
+              className="mb-3 text-sm text-gray-400 transition-all duration-200 hover:text-slate-900"
               onClick={() => switchView('week')}
               type="button"
             >
