@@ -7,10 +7,9 @@ interface ProjectSelectorProps {
   projects: Project[];
   visibleProjectIds: string[];
   sliderValues: Record<string, number>;
-  removableProjectIds: Set<string>;
   totalSliderValue: number;
   onSliderChange: (projectId: string, value: number) => void;
-  onAddProject: (projectId: string, removable: boolean) => void;
+  onAddProject: (projectId: string) => void;
   onRemoveProject: (projectId: string) => void;
   onProjectCreated: (project: Project) => void;
 }
@@ -23,7 +22,6 @@ export function ProjectSelector({
   projects,
   visibleProjectIds,
   sliderValues,
-  removableProjectIds,
   totalSliderValue,
   onSliderChange,
   onAddProject,
@@ -53,7 +51,7 @@ export function ProjectSelector({
   const handleCreateProject = async (input: { name: string; color: string }) => {
     const created = await createProject(input);
     onProjectCreated(created);
-    onAddProject(created.id, true);
+    onAddProject(created.id);
     setShowAddModal(false);
     setAddOpen(false);
   };
@@ -74,16 +72,14 @@ export function ProjectSelector({
               className={`relative rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
-              {removableProjectIds.has(project.id) ? (
-                <button
-                  aria-label={`Fjern ${project.name}`}
-                  className="absolute right-2 top-2 rounded p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                  onClick={() => onRemoveProject(project.id)}
-                  type="button"
-                >
-                  ✕
-                </button>
-              ) : null}
+              <button
+                aria-label={`Fjern ${project.name}`}
+                className="absolute right-2 top-2 h-5 w-5 rounded-full bg-gray-100 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600"
+                onClick={() => onRemoveProject(project.id)}
+                type="button"
+              >
+                ×
+              </button>
 
               <div className="mb-2 flex items-center gap-2 pr-8">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
@@ -140,7 +136,7 @@ export function ProjectSelector({
                     className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-50"
                     key={project.id}
                     onClick={() => {
-                      onAddProject(project.id, true);
+                      onAddProject(project.id);
                       setAddOpen(false);
                     }}
                     type="button"

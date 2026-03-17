@@ -66,7 +66,6 @@ export function EntryForm({
   const [projects, setProjects] = useState<Project[]>([]);
   const [visibleProjectIds, setVisibleProjectIds] = useState<string[]>([]);
   const [sliderValues, setSliderValues] = useState<Record<string, number>>({});
-  const [removableProjectIds, setRemovableProjectIds] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -119,7 +118,6 @@ export function EntryForm({
 
       setVisibleProjectIds(initialIds);
       setSliderValues(nextValues);
-      setRemovableProjectIds(new Set());
     };
 
     void load();
@@ -137,12 +135,9 @@ export function EntryForm({
     setSliderValues((current) => ({ ...current, [projectId]: clampToHalfStep(value) }));
   };
 
-  const handleAddProject = (projectId: string, removable: boolean) => {
+  const handleAddProject = (projectId: string) => {
     setVisibleProjectIds((current) => (current.includes(projectId) ? current : [...current, projectId]));
     setSliderValues((current) => ({ ...current, [projectId]: current[projectId] ?? 0 }));
-    if (removable) {
-      setRemovableProjectIds((current) => new Set(current).add(projectId));
-    }
   };
 
   const handleRemoveProject = (projectId: string) => {
@@ -150,11 +145,6 @@ export function EntryForm({
     setSliderValues((current) => {
       const next = { ...current };
       delete next[projectId];
-      return next;
-    });
-    setRemovableProjectIds((current) => {
-      const next = new Set(current);
-      next.delete(projectId);
       return next;
     });
   };
@@ -166,7 +156,6 @@ export function EntryForm({
   const handleReset = () => {
     setVisibleProjectIds([]);
     setSliderValues({});
-    setRemovableProjectIds(new Set());
     setSuccessMessage(null);
   };
 
@@ -223,7 +212,6 @@ export function EntryForm({
         onRemoveProject={handleRemoveProject}
         onSliderChange={handleSliderChange}
         projects={projects}
-        removableProjectIds={removableProjectIds}
         sliderValues={sliderValues}
         totalSliderValue={totalSliderValue}
         visibleProjectIds={visibleProjectIds}
