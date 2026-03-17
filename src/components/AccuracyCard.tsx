@@ -103,14 +103,14 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
   const streak = calculateStreak(recentEntries, currentWeekStart);
 
   return (
-    <section className="space-y-5 rounded-lg bg-white p-5 shadow-sm">
+    <section className="space-y-5 rounded-2xl border border-violet-200/15 bg-slate-900/70 p-5 shadow-sm">
       <div className="text-center">
-        <p className="text-sm font-medium text-slate-500">Treffscore</p>
-        <p className="text-5xl font-bold text-indigo-600">{animatedScore}</p>
-        <p className="mt-1 text-base text-slate-700">{scoreLabel(score)}</p>
+        <p className="text-sm font-medium text-slate-300">Treffscore</p>
+        <p className="bg-gradient-to-r from-violet-200 to-indigo-200 bg-clip-text text-5xl font-bold text-transparent">{animatedScore}</p>
+        <p className="mt-1 text-base text-slate-200">{scoreLabel(score)}</p>
       </div>
 
-      <div className="rounded-lg border border-orange-200 bg-orange-50 px-4 py-3 text-center text-lg font-semibold text-orange-700">
+      <div className="rounded-xl border border-amber-300/30 bg-amber-500/15 px-4 py-3 text-center text-lg font-semibold text-amber-100">
         🔥 {streak} uker på rad
       </div>
 
@@ -118,15 +118,15 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
         {comparisonRows.map((row) => {
           const color = colorClass(row.project?.color ?? '#6366F1');
           return (
-            <div className="rounded-md border border-slate-200 p-3" key={row.id}>
-              <p className="mb-2 text-sm font-medium text-slate-800">{row.project?.name ?? 'Ukjent prosjekt'}</p>
+            <div className="rounded-xl border border-violet-200/15 bg-slate-900/75 p-3" key={row.id}>
+              <p className="mb-2 text-sm font-medium text-slate-200">{row.project?.name ?? 'Ukjent prosjekt'}</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Plan {row.planned}%</p>
+                  <p className="mb-1 text-xs text-slate-400">Plan {row.planned}%</p>
                   <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.planned} />
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Fasit {row.actual}%</p>
+                  <p className="mb-1 text-xs text-slate-400">Fasit {row.actual}%</p>
                   <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.actual} />
                 </div>
               </div>
