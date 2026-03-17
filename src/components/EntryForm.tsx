@@ -192,12 +192,12 @@ export function EntryForm({
   };
 
   return (
-    <section className="space-y-5 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold tracking-tight text-slate-900">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
+    <section className="space-y-5 rounded-2xl border border-violet-200/15 bg-slate-900/70 p-6 shadow-[0_14px_35px_rgba(15,23,42,0.45)]">
+      <h2 className="bg-gradient-to-r from-violet-100 to-indigo-100 bg-clip-text text-xl font-semibold tracking-tight text-transparent">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
 
       {type === 'actual' && existingPlan ? (
         <button
-          className="w-full rounded-lg border border-indigo-600 px-4 py-2.5 font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-40"
+          className="w-full rounded-xl border border-violet-300/35 bg-violet-500/10 px-4 py-2.5 font-medium text-violet-100 transition hover:bg-violet-500/20 disabled:opacity-40"
           disabled={submitting}
           onClick={() => void handleSubmitAsPlanned()}
           type="button"
@@ -217,10 +217,10 @@ export function EntryForm({
         visibleProjectIds={visibleProjectIds}
       />
 
-      {successMessage ? <p className="text-sm font-medium text-emerald-700">{successMessage}</p> : null}
+      {successMessage ? <p className="text-sm font-medium text-emerald-300">{successMessage}</p> : null}
 
       <button
-        className="w-full rounded-lg border border-slate-300 px-4 py-2.5 font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-40"
+        className="w-full rounded-xl border border-violet-200/20 bg-slate-900/80 px-4 py-2.5 font-medium text-slate-200 transition hover:bg-violet-500/10 disabled:opacity-40"
         disabled={submitting}
         onClick={handleReset}
         type="button"
@@ -229,7 +229,7 @@ export function EntryForm({
       </button>
 
       <button
-        className="w-full rounded-lg bg-indigo-600 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-indigo-500 disabled:opacity-40"
+        className="w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 px-4 py-2.5 font-medium text-white shadow-[0_8px_24px_rgba(79,70,229,0.45)] transition hover:brightness-110 disabled:opacity-40"
         disabled={submitting || !canSubmit}
         onClick={() => void handleSubmit()}
         type="button"
