@@ -109,7 +109,6 @@ export function ProjectSelector({
                     value={value}
                   />
                 </div>
-                <span className="w-8 text-right text-xs text-slate-500">{value.toFixed(1)}</span>
               </div>
             </article>
           );
