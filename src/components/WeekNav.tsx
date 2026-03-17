@@ -7,7 +7,7 @@ interface WeekNavProps {
 
 export function WeekNav({ currentWeekStart, onChangeWeek }: WeekNavProps) {
   const stepWeek = (delta: number) => {
-    const date = new Date(`${currentWeekStart}T00:00:00`);
+    const date = new Date(`${currentWeekStart}T12:00:00`);
     date.setDate(date.getDate() + delta * 7);
     onChangeWeek(weekStart(date));
   };

@@ -5,6 +5,7 @@ export function weekStart(date: Date = new Date()): string {
   const day = d.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
+  d.setHours(12, 0, 0, 0);
   return d.toISOString().split('T')[0];
 }
 
@@ -42,7 +43,7 @@ export function calculateStreak(entries: WeekEntry[], currentWeekStart: string):
 
   while (completeWeekSet.has(cursor)) {
     streak += 1;
-    const cursorDate = new Date(`${cursor}T00:00:00`);
+    const cursorDate = new Date(`${cursor}T12:00:00`);
     cursorDate.setDate(cursorDate.getDate() - 7);
     cursor = weekStart(cursorDate);
   }
@@ -78,7 +79,7 @@ export function sortProjects(projects: Project[], history: WeekEntry[]): Project
 }
 
 export function formatWeekLabel(weekStartDate: string): string {
-  const start = new Date(`${weekStartDate}T00:00:00`);
+  const start = new Date(`${weekStartDate}T12:00:00`);
   const end = new Date(start);
   end.setDate(start.getDate() + 4);
 
@@ -90,7 +91,7 @@ export function formatWeekLabel(weekStartDate: string): string {
 }
 
 export function weekNumber(weekStartDate: string): number {
-  return isoWeek(new Date(`${weekStartDate}T00:00:00`));
+  return isoWeek(new Date(`${weekStartDate}T12:00:00`));
 }
 
 function isoWeek(date: Date): number {
