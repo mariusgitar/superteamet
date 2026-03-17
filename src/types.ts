@@ -32,5 +32,4 @@ export interface DashboardResponse {
   weeks: string[];
   projects: Project[];
   entries: WeekEntry[];
-  pairedEntries: WeekEntry[];
 }
