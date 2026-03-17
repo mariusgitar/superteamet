@@ -22,10 +22,10 @@ Core mechanic: plan vs. actual comparison with an accuracy score and streak gami
 | Frontend | React + Vite + Tailwind CSS |
 | Language | TypeScript |
 | Database | Neon (serverless Postgres) |
-| API | Vercel serverless functions (`/api/*.ts`) |
+| API | Netlify Functions (`netlify/functions/*.ts`) |
 | DB client | `postgres` npm package (no ORM) |
 | Charts | Recharts |
-| Deploy | Vercel |
+| Deploy | Netlify |
 | Confetti | `canvas-confetti` |
 
 ---
@@ -37,7 +37,7 @@ ukespeil/
 ├── AGENTS.md                  ← this file
 ├── .env.local                 ← DATABASE_URL, API_SECRET (never commit)
 ├── .env.example               ← committed, no real secrets
-├── vercel.json
+├── netlify.toml
 ├── vite.config.ts
 ├── tailwind.config.ts
 ├── src/
@@ -45,7 +45,7 @@ ukespeil/
 │   ├── App.tsx
 │   ├── types.ts               ← shared TypeScript types
 │   ├── lib/
-│   │   ├── api.ts             ← all fetch calls to /api
+│   │   ├── api.ts             ← all fetch calls to Netlify functions
 │   │   ├── utils.ts           ← weekStart(), accuracyScore(), sortProjects()
 │   │   └── constants.ts
 │   ├── hooks/
@@ -73,11 +73,14 @@ ukespeil/
 │           ├── ProjectList.tsx
 │           ├── AddProjectModal.tsx
 │           └── EditProjectModal.tsx
-└── api/
-    ├── _db.ts                 ← shared Neon client
-    ├── users.ts               ← GET /api/users, POST /api/users
-    ├── projects.ts            ← GET /api/projects, POST, PATCH /api/projects/[id]
-    └── entries.ts             ← GET /api/entries, POST /api/entries
+└── netlify/
+    └── functions/
+        ├── _db.ts             ← shared Neon client
+        ├── health.ts          ← GET /.netlify/functions/health
+        ├── users.ts           ← GET/POST /.netlify/functions/users
+        ├── projects.ts        ← GET/POST/PATCH /.netlify/functions/projects
+        ├── entries.ts         ← GET/POST /.netlify/functions/entries
+        └── dashboard.ts       ← GET /.netlify/functions/dashboard
 ```
 
 ---
@@ -129,18 +132,18 @@ CREATE TABLE week_entries (
 
 ## API routes
 
-All routes live in `/api/*.ts` (Vercel serverless functions).
-Protected write routes require header `x-api-secret: <API_SECRET>` — set this env var in Vercel.
+All routes live in `netlify/functions/*.ts` (Netlify Functions).
+Protected write routes require header `x-api-secret: <API_SECRET>` — set this env var in Netlify.
 
 | Method | Route | Description |
 |---|---|---|
-| GET | `/api/users` | List all users |
-| POST | `/api/users` | Create user `{ name }` |
-| GET | `/api/projects` | List active projects |
-| POST | `/api/projects` | Create project `{ name, color }` |
-| PATCH | `/api/projects/:id` | Update project `{ name?, color?, active? }` |
-| GET | `/api/entries?userId=&weekStart=` | Get plan+actual for a user+week |
-| POST | `/api/entries` | Upsert entry `{ userId, weekStart, type, allocations }` |
+| GET | `/.netlify/functions/users` | List all users |
+| POST | `/.netlify/functions/users` | Create user `{ name }` |
+| GET | `/.netlify/functions/projects` | List active projects |
+| POST | `/.netlify/functions/projects` | Create project `{ name, color }` |
+| PATCH | `/.netlify/functions/projects?id=<id>` | Update project `{ name?, color?, active? }` |
+| GET | `/.netlify/functions/entries?userId=&weekStart=` | Get plan+actual for a user+week |
+| POST | `/.netlify/functions/entries` | Upsert entry `{ userId, weekStart, type, allocations }` |
 
 ---
 
@@ -221,7 +224,7 @@ VITE_API_SECRET=same-value-as-API_SECRET
 ## Coding conventions
 
 - **TypeScript everywhere.** No `any`. Define all shared types in `src/types.ts`.
-- **No ORM.** Use the `postgres` package directly. Keep queries in the `/api` route files.
+- **No ORM.** Use the `postgres` package directly. Keep queries in the Netlify function files.
 - **No inline styles.** Use Tailwind utility classes only.
 - **Error handling.** Every API route must return a JSON error with a meaningful message on failure. Every `fetch` call in `api.ts` must throw on non-2xx.
 - **Rounding.** All percentages displayed in the UI must be rounded integers. Never show floats.
@@ -259,16 +262,16 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Vercel CLI is optional but useful: `npx vercel dev` runs both Vite and the /api functions locally.
+Netlify CLI is optional but useful: `npx netlify dev` runs both Vite and the Netlify functions locally.
 
 ---
 
-## Vercel deployment
+## Netlify deployment
 
-- Connect the GitHub repo to Vercel.
-- Set `DATABASE_URL`, `API_SECRET`, and `VITE_API_SECRET` as environment variables in the Vercel dashboard.
-- Framework preset: **Vite**.
-- Build command: `npm run build` / Output: `dist`.
+- Connect the GitHub repo to Netlify.
+- Set `DATABASE_URL`, `API_SECRET`, and `VITE_API_SECRET` as environment variables in the Netlify dashboard.
+- Build command: `npm run build` / Publish directory: `dist`.
+- Functions directory: `netlify/functions` (configured in `netlify.toml`).
 
 ---
 

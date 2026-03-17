@@ -1,6 +1,7 @@
 import type { DashboardResponse, EntryType, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
 
 const API_SECRET = import.meta.env.VITE_API_SECRET;
+const BASE = import.meta.env.DEV ? 'http://localhost:8888/.netlify/functions' : '/.netlify/functions';
 
 async function request<T>(input: string, init?: RequestInit): Promise<T> {
   const response = await fetch(input, init);
@@ -14,19 +15,19 @@ async function request<T>(input: string, init?: RequestInit): Promise<T> {
 }
 
 export function getUsers(): Promise<User[]> {
-  return request<User[]>('/api/users');
+  return request<User[]>(`${BASE}/users`);
 }
 
 export function getProjects(): Promise<Project[]> {
-  return request<Project[]>('/api/projects');
+  return request<Project[]>(`${BASE}/projects`);
 }
 
 export function getAllProjects(): Promise<Project[]> {
-  return request<Project[]>('/api/projects?includeArchived=true');
+  return request<Project[]>(`${BASE}/projects?includeArchived=true`);
 }
 
 export function createProject(input: { name: string; color: string }): Promise<Project> {
-  return request<Project>('/api/projects', {
+  return request<Project>(`${BASE}/projects`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -37,7 +38,7 @@ export function createProject(input: { name: string; color: string }): Promise<P
 }
 
 export function updateProject(projectId: string, input: { name?: string; color?: string; active?: boolean }): Promise<Project> {
-  return request<Project>(`/api/projects/${projectId}`, {
+  return request<Project>(`${BASE}/projects?id=${projectId}`, {
     method: 'PATCH',
     headers: {
       'Content-Type': 'application/json',
@@ -49,17 +50,17 @@ export function updateProject(projectId: string, input: { name?: string; color?:
 
 export function getWeekEntries(userId: string, start: string): Promise<WeekEntriesResponse> {
   const query = new URLSearchParams({ userId, weekStart: start }).toString();
-  return request<WeekEntriesResponse>(`/api/entries?${query}`);
+  return request<WeekEntriesResponse>(`${BASE}/entries?${query}`);
 }
 
 export function getActualHistory(userId: string): Promise<WeekEntry[]> {
   const query = new URLSearchParams({ userId, limit: '20', type: 'actual' }).toString();
-  return request<WeekEntry[]>(`/api/entries?${query}`);
+  return request<WeekEntry[]>(`${BASE}/entries?${query}`);
 }
 
 export function getRecentEntries(userId: string, limit = 20): Promise<WeekEntry[]> {
   const query = new URLSearchParams({ userId, limit: String(limit) }).toString();
-  return request<WeekEntry[]>(`/api/entries?${query}`);
+  return request<WeekEntry[]>(`${BASE}/entries?${query}`);
 }
 
 interface DashboardQueryInput {
@@ -78,7 +79,7 @@ export function getDashboard(input: DashboardQueryInput): Promise<DashboardRespo
     query.set('weeks', String(input.weeks));
   }
 
-  return request<DashboardResponse>(`/api/dashboard?${query.toString()}`);
+  return request<DashboardResponse>(`${BASE}/dashboard?${query.toString()}`);
 }
 
 interface UpsertEntryInput {
@@ -89,7 +90,7 @@ interface UpsertEntryInput {
 }
 
 export function upsertEntry(input: UpsertEntryInput): Promise<WeekEntry> {
-  return request<WeekEntry>('/api/entries', {
+  return request<WeekEntry>(`${BASE}/entries`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

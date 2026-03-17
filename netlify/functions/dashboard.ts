@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { Handler } from '@netlify/functions';
 import sql from './_db.js';
 
 interface EntryRow {
@@ -21,26 +21,25 @@ interface WeekRow {
   week_start: string;
 }
 
-interface DashboardQuery {
-  weeks?: string;
-  weekStart?: string;
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const handler: Handler = async (event) => {
   try {
-    if (req.method !== 'GET') {
-      return res.status(405).json({ error: 'Method Not Allowed' });
+    if (event.httpMethod !== 'GET') {
+      return {
+        statusCode: 405,
+        body: JSON.stringify({ error: 'Method Not Allowed' }),
+      };
     }
 
-    const query = req.query as DashboardQuery;
-    const requestedWeekStart = query.weekStart ? String(query.weekStart) : undefined;
+    const requestedWeekStart = event.queryStringParameters?.weekStart
+      ? String(event.queryStringParameters.weekStart)
+      : undefined;
 
     let weekValues: string[] = [];
 
     if (requestedWeekStart) {
       weekValues = [requestedWeekStart];
     } else {
-      const weeks = Number(query.weeks ?? '12');
+      const weeks = Number(event.queryStringParameters?.weeks ?? '12');
       const weekCount = Number.isInteger(weeks) && weeks > 0 ? weeks : 12;
 
       const rangeRows = await sql<WeekRow[]>`
@@ -62,12 +61,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     `;
 
     if (weekValues.length === 0) {
-      return res.status(200).json({
-        weeks: [],
-        projects,
-        entries: [],
-        pairedEntries: [],
-      });
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          weeks: [],
+          projects,
+          entries: [],
+          pairedEntries: [],
+        }),
+      };
     }
 
     const entries = await sql<EntryRow[]>`
@@ -84,28 +86,34 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ORDER BY week_start ASC, submitted_at ASC
     `;
 
-    return res.status(200).json({
-      weeks: weekValues,
-      projects,
-      entries: entries.map((row) => ({
-        id: row.id,
-        userId: row.user_id,
-        weekStart: row.week_start,
-        type: row.type,
-        allocations: row.allocations,
-        submittedAt: row.submitted_at,
-      })),
-      pairedEntries: pairedEntries.map((row) => ({
-        id: row.id,
-        userId: row.user_id,
-        weekStart: row.week_start,
-        type: row.type,
-        allocations: row.allocations,
-        submittedAt: row.submitted_at,
-      })),
-    });
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        weeks: weekValues,
+        projects,
+        entries: entries.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          weekStart: row.week_start,
+          type: row.type,
+          allocations: row.allocations,
+          submittedAt: row.submitted_at,
+        })),
+        pairedEntries: pairedEntries.map((row) => ({
+          id: row.id,
+          userId: row.user_id,
+          weekStart: row.week_start,
+          type: row.type,
+          allocations: row.allocations,
+          submittedAt: row.submitted_at,
+        })),
+      }),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({ error: message });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: message }),
+    };
   }
-}
+};

@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { Handler } from '@netlify/functions';
 import sql from './_db.js';
 
 interface EntryRow {
@@ -10,20 +10,26 @@ interface EntryRow {
   submitted_at: string;
 }
 
-function unauthorized(res: VercelResponse) {
-  return res.status(401).json({ error: 'Unauthorized' });
+function unauthorized() {
+  return {
+    statusCode: 401,
+    body: JSON.stringify({ error: 'Unauthorized' }),
+  };
 }
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+export const handler: Handler = async (event) => {
   try {
-    if (req.method === 'GET') {
-      const userId = String(req.query.userId ?? '');
-      const weekStart = req.query.weekStart ? String(req.query.weekStart) : undefined;
-      const type = req.query.type ? String(req.query.type) : undefined;
-      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+    if (event.httpMethod === 'GET') {
+      const userId = String(event.queryStringParameters?.userId ?? '');
+      const weekStart = event.queryStringParameters?.weekStart ? String(event.queryStringParameters.weekStart) : undefined;
+      const type = event.queryStringParameters?.type ? String(event.queryStringParameters.type) : undefined;
+      const limit = event.queryStringParameters?.limit ? Number(event.queryStringParameters.limit) : undefined;
 
       if (!userId) {
-        return res.status(400).json({ error: 'userId is required' });
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'userId is required' }),
+        };
       }
 
       if (weekStart) {
@@ -36,10 +42,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const plan = rows.find((row) => row.type === 'plan') ?? null;
         const actual = rows.find((row) => row.type === 'actual') ?? null;
 
-        return res.status(200).json({
-          plan: toWeekEntry(plan),
-          actual: toWeekEntry(actual),
-        });
+        return {
+          statusCode: 200,
+          body: JSON.stringify({
+            plan: toWeekEntry(plan),
+            actual: toWeekEntry(actual),
+          }),
+        };
       }
 
       if (limit && Number.isInteger(limit) && limit > 0) {
@@ -52,7 +61,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             LIMIT ${limit}
           `;
 
-          return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
+          return {
+            statusCode: 200,
+            body: JSON.stringify(rows.map(toWeekEntry).filter((entry) => entry !== null)),
+          };
         }
 
         const rows = await sql<EntryRow[]>`
@@ -63,18 +75,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           LIMIT ${limit}
         `;
 
-        return res.status(200).json(rows.map(toWeekEntry).filter((entry) => entry !== null));
+        return {
+          statusCode: 200,
+          body: JSON.stringify(rows.map(toWeekEntry).filter((entry) => entry !== null)),
+        };
       }
 
-      return res.status(400).json({ error: 'weekStart or limit query is required' });
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'weekStart or limit query is required' }),
+      };
     }
 
-    if (req.method === 'POST') {
-      if (req.headers['x-api-secret'] !== process.env.API_SECRET) {
-        return unauthorized(res);
+    if (event.httpMethod === 'POST') {
+      if (event.headers['x-api-secret'] !== process.env.API_SECRET) {
+        return unauthorized();
       }
 
-      const { userId, weekStart, type, allocations } = req.body as {
+      const { userId, weekStart, type, allocations } = JSON.parse(event.body ?? '{}') as {
         userId?: string;
         weekStart?: string;
         type?: 'plan' | 'actual';
@@ -82,7 +100,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       };
 
       if (!userId || !weekStart || !type || !allocations) {
-        return res.status(400).json({ error: 'userId, weekStart, type and allocations are required' });
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'userId, weekStart, type and allocations are required' }),
+        };
       }
 
       const [upserted] = await sql<EntryRow[]>`
@@ -93,15 +114,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         RETURNING id, user_id, week_start, type, allocations, submitted_at
       `;
 
-      return res.status(200).json(toWeekEntry(upserted));
+      return {
+        statusCode: 200,
+        body: JSON.stringify(toWeekEntry(upserted)),
+      };
     }
 
-    return res.status(405).json({ error: 'Method Not Allowed' });
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method Not Allowed' }),
+    };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({ error: message });
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ error: message }),
+    };
   }
-}
+};
 
 function toWeekEntry(row: EntryRow | null) {
   if (!row) return null;
