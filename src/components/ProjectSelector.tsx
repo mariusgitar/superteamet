@@ -57,8 +57,8 @@ export function ProjectSelector({
   };
 
   return (
-    <section className="space-y-4">
-      <div className="space-y-3">
+    <section className="space-y-2">
+      <div className="space-y-2">
         {visibleProjectIds.map((projectId) => {
           const project = projectById.get(projectId);
           if (!project) return null;
@@ -69,7 +69,7 @@ export function ProjectSelector({
 
           return (
             <article
-              className={`relative rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              className={`relative rounded-2xl border border-slate-200/80 bg-white/95 px-4 py-2 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
               <button
@@ -85,7 +85,6 @@ export function ProjectSelector({
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
                 <p className="truncate text-sm font-semibold text-slate-900">{project.name}</p>
                 <div className="ml-auto text-right">
-                  <p className="text-sm font-medium text-slate-700">{value.toFixed(1)}</p>
                   <p className="text-xs text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
                 </div>
               </div>
