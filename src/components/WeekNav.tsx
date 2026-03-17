@@ -13,12 +13,12 @@ export function WeekNav({ currentWeekStart, onChangeWeek }: WeekNavProps) {
   };
 
   return (
-    <div className="mb-6 flex items-center justify-between rounded-2xl bg-white px-4 py-4 shadow-sm">
-      <button className="flex items-center justify-center rounded-xl border border-gray-200 p-3 transition-colors duration-150 hover:bg-gray-100" onClick={() => stepWeek(-1)} type="button">
+    <div className="mb-6 flex items-center justify-between rounded-lg bg-white p-4 shadow-sm">
+      <button className="flex h-11 w-11 items-center justify-center rounded border hover:bg-slate-50" onClick={() => stepWeek(-1)} type="button">
         ←
       </button>
-      <p className="text-lg font-semibold">{formatWeekLabel(currentWeekStart)}</p>
-      <button className="flex items-center justify-center rounded-xl border border-gray-200 p-3 transition-colors duration-150 hover:bg-gray-100" onClick={() => stepWeek(1)} type="button">
+      <p className="font-semibold">{formatWeekLabel(currentWeekStart)}</p>
+      <button className="flex h-11 w-11 items-center justify-center rounded border hover:bg-slate-50" onClick={() => stepWeek(1)} type="button">
         →
       </button>
     </div>

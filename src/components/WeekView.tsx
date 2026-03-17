@@ -21,7 +21,7 @@ interface ActionButtonProps {
 function ActionButton({ title, subtitle, onClick, submitted = false }: ActionButtonProps) {
   return (
     <button
-      className="flex h-full w-full flex-col items-start rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left shadow-sm transition-all duration-200 hover:shadow-md"
+      className="flex h-full w-full flex-col items-start rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-indigo-300 hover:bg-indigo-50"
       onClick={onClick}
       type="button"
     >
@@ -31,7 +31,7 @@ function ActionButton({ title, subtitle, onClick, submitted = false }: ActionBut
           <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Levert</span>
         ) : null}
       </div>
-      <span className="mt-2 text-sm text-gray-400">{subtitle}</span>
+      <span className="mt-2 text-sm text-slate-500">{subtitle}</span>
     </button>
   );
 }
@@ -78,7 +78,7 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
 
   if (loading) {
     return (
-      <section className="rounded-2xl bg-white p-5 shadow-sm">
+      <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="space-y-4">
           <div className="h-7 w-40 animate-pulse rounded bg-gray-200" />
           <div className="h-28 animate-pulse rounded-lg bg-gray-200" />
@@ -90,12 +90,12 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
   }
 
   if (error) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-red-400 shadow-sm">{error}</p>;
+    return <p className="rounded-lg bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
   }
 
   if (isTooFarInPastWithoutPlan) {
     return (
-      <section className="rounded-2xl bg-white p-8 text-center shadow-sm">
+      <section className="rounded-lg bg-white p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 w-20 text-slate-400" aria-hidden>
           <svg fill="none" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
             <rect x="15" y="20" width="90" height="82" rx="10" className="fill-slate-100 stroke-slate-300" strokeWidth="4" />
@@ -115,7 +115,7 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
     return (
       <div className="space-y-2">
         <button
-          className="text-sm font-medium text-gray-400 underline-offset-2 transition-all duration-200 hover:text-slate-900 hover:underline"
+          className="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
           onClick={() => setActiveForm(null)}
           type="button"
         >
@@ -143,12 +143,12 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           plan={entries.plan}
           userId={user.id}
         />
-        <div className="text-center text-sm text-gray-400">
-          <button className="underline-offset-2 transition-all duration-200 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
+        <div className="text-center text-sm text-slate-600">
+          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
             Juster ukesplan
           </button>
           <span className="mx-2 text-slate-400">·</span>
-          <button className="underline-offset-2 transition-all duration-200 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('actual')} type="button">
+          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('actual')} type="button">
             Juster ukas arbeid
           </button>
         </div>
@@ -157,9 +157,9 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
   }
 
   return (
-    <section className="space-y-4 rounded-2xl bg-white p-5 shadow-sm">
+    <section className="space-y-4 rounded-lg bg-white p-5 shadow-sm">
       {entries.actual && !entries.plan ? (
-        <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
           Arbeid registrert for {formatWeekLabel(currentWeekStart)} ✓
         </p>
       ) : null}
