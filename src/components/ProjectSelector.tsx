@@ -1,5 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
-import type { PointerEvent } from 'react';
+import { useMemo, useState } from 'react';
 import { createProject } from '../lib/api';
 import type { Project } from '../types';
 import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
@@ -61,7 +60,7 @@ export function ProjectSelector({
 
   return (
     <section className="space-y-3">
-      <div className="max-h-[28rem] space-y-2 overflow-y-auto pr-1">
+      <div className="space-y-2">
         {visibleProjectIds.map((projectId) => {
           const project = projectById.get(projectId);
           if (!project) return null;
@@ -93,12 +92,27 @@ export function ProjectSelector({
               </div>
 
               <div className="flex items-center gap-3">
-                <ProjectValueSlider
-                  onChange={(nextValue) => onSliderChange(project.id, nextValue)}
-                  projectColor={project.color}
-                  projectName={project.name}
-                  value={value}
-                />
+                <div className="relative flex h-11 flex-1 items-center py-2">
+                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100" />
+                  <div
+                    className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
+                    style={{
+                      width: `${(value / 5) * 100}%`,
+                      backgroundColor: project.color,
+                      opacity: 0.85,
+                    }}
+                  />
+                  <input
+                    aria-label={`${project.name} slider`}
+                    className="touch-slider absolute left-0 top-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0"
+                    max={5}
+                    min={0}
+                    onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
+                    step={0.5}
+                    type="range"
+                    value={value}
+                  />
+                </div>
                 <span className="w-8 text-right text-xs text-slate-500">{value.toFixed(1)}</span>
               </div>
             </article>
@@ -161,69 +175,5 @@ export function ProjectSelector({
         />
       ) : null}
     </section>
-  );
-}
-
-interface ProjectValueSliderProps {
-  projectName: string;
-  projectColor: string;
-  value: number;
-  onChange: (value: number) => void;
-}
-
-function ProjectValueSlider({ projectName, projectColor, value, onChange }: ProjectValueSliderProps) {
-  const trackRef = useRef<HTMLDivElement | null>(null);
-
-  const updateValue = (event: PointerEvent<HTMLDivElement>) => {
-    if (!trackRef.current) return;
-    const rect = trackRef.current.getBoundingClientRect();
-    if (rect.width === 0) return;
-
-    const x = Math.max(0, Math.min(event.clientX - rect.left, rect.width));
-    const ratio = x / rect.width;
-    const raw = ratio * 5;
-    const stepped = Math.round(raw / 0.5) * 0.5;
-    const clamped = Math.max(0, Math.min(5, stepped));
-    onChange(clamped);
-  };
-
-  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    updateValue(event);
-  };
-
-  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.buttons === 0 && event.pointerType === 'mouse') return;
-    updateValue(event);
-  };
-
-  const handlePointerUp = (event: PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.releasePointerCapture(event.pointerId);
-  };
-
-  return (
-    <div
-      aria-label={`${projectName} slider`}
-      className="relative h-11 w-full flex-1 cursor-pointer select-none"
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      role="slider"
-      aria-valuemin={0}
-      aria-valuemax={5}
-      aria-valuenow={value}
-      style={{ touchAction: 'none' }}
-      tabIndex={0}
-    >
-      <div className="absolute inset-0 rounded-full bg-slate-100" />
-      <div
-        className="absolute left-0 top-0 bottom-0 rounded-full"
-        style={{
-          width: `${(value / 5) * 100}%`,
-          backgroundColor: projectColor,
-          opacity: 0.85,
-        }}
-      />
-    </div>
   );
 }
