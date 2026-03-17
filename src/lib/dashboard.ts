@@ -1,4 +1,5 @@
 import type { Project, WeekEntry } from '../types';
+import { weekNumber } from './utils';
 
 export interface AggregatedWeek {
   weekStart: string;
@@ -103,10 +104,6 @@ function weekSpread(entries: WeekEntry[]): number {
 }
 
 function toWeekLabel(weekStartDate: string): string {
-  const date = new Date(`${weekStartDate}T12:00:00`);
-  const jan4 = new Date(date.getFullYear(), 0, 4);
-  const startOfWeek1 = new Date(jan4);
-  startOfWeek1.setDate(jan4.getDate() - ((jan4.getDay() + 6) % 7));
-  const weekNum = Math.round((date.getTime() - startOfWeek1.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
-  return `Uke ${weekNum}`;
+  const isoDate = weekStartDate.split('T')[0];
+  return `Uke ${weekNumber(isoDate)}`;
 }
