@@ -59,10 +59,10 @@ export default function App() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-50 px-4 py-8">
+    <main className="min-h-screen px-4 py-8 text-slate-900">
       {toast ? (
         <div
-          className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-lg transition-opacity duration-300 ${
+          className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl bg-slate-900/95 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-white/20 transition-opacity duration-300 ${
             toast.visible ? 'opacity-100' : 'opacity-0'
           }`}
           role="status"
@@ -71,23 +71,23 @@ export default function App() {
         </div>
       ) : null}
 
-      <div className="mx-auto max-w-5xl">
-        <header className="mb-4">
-          <h1 className="text-2xl font-semibold">Ukespeil</h1>
+      <div className="mx-auto max-w-5xl animate-fade-up">
+        <header className="mb-5 rounded-3xl border border-white/60 bg-white/70 p-5 shadow-[0_18px_50px_-32px_rgba(79,70,229,0.45)] backdrop-blur">
+          <h1 className="text-3xl font-semibold tracking-tight">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
-            <p className="text-sm text-slate-600">Hei, {user.name}</p>
+            <p className="text-sm text-slate-500">Hei, {user.name} ✨</p>
             {view === 'week' ? (
               <>
                 <div className="hidden items-center gap-3 sm:flex">
                   <button
-                    className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
                     onClick={() => switchView('dashboard')}
                     type="button"
                   >
                     Dashboard
                   </button>
                   <button
-                    className="text-xs text-slate-500 underline-offset-2 hover:text-slate-700 hover:underline"
+                    className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
                     onClick={() => switchView('admin')}
                     type="button"
                   >
@@ -97,23 +97,23 @@ export default function App() {
 
                 <div className="relative sm:hidden">
                   <button
-                    className="flex h-11 w-11 items-center justify-center rounded-md border border-slate-300 bg-white text-lg text-slate-700"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 bg-white/90 text-lg text-slate-600 shadow-sm"
                     onClick={() => setMobileMenuOpen((current) => !current)}
                     type="button"
                   >
                     ≡
                   </button>
                   {mobileMenuOpen ? (
-                    <div className="absolute right-0 top-12 z-20 w-52 rounded-lg border border-slate-200 bg-white p-1 text-sm shadow-lg">
+                    <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
                       <button
-                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 hover:bg-slate-100"
+                        className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
                         onClick={() => switchView('dashboard')}
                         type="button"
                       >
                         Dashboard
                       </button>
                       <button
-                        className="block w-full rounded-md px-3 py-2 text-left text-slate-700 hover:bg-slate-100"
+                        className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
                         onClick={() => switchView('admin')}
                         type="button"
                       >
@@ -141,7 +141,7 @@ export default function App() {
         {view === 'admin' ? (
           <>
             <button
-              className="mb-3 text-sm text-slate-600 hover:text-slate-900"
+              className="mb-3 inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-600 transition hover:text-slate-900"
               onClick={() => switchView('week')}
               type="button"
             >
@@ -154,7 +154,7 @@ export default function App() {
         {view === 'dashboard' ? (
           <>
             <button
-              className="mb-3 text-sm text-slate-600 hover:text-slate-900"
+              className="mb-3 inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-600 transition hover:text-slate-900"
               onClick={() => switchView('week')}
               type="button"
             >

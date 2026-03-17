@@ -33,10 +33,10 @@ export function UserSelect({ onSelect }: UserSelectProps) {
   };
 
   return (
-    <main className="min-h-screen grid place-items-center bg-slate-50 px-4">
-      <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-md">
-        <h1 className="text-2xl font-semibold">Velkommen til Ukespeil</h1>
-        <p className="mt-2 text-sm text-slate-600">Velg navnet ditt for å komme i gang.</p>
+    <main className="grid min-h-screen place-items-center px-4">
+      <section className="w-full max-w-md rounded-3xl border border-white/70 bg-white/80 p-6 shadow-[0_20px_40px_-26px_rgba(79,70,229,0.65)] backdrop-blur">
+        <h1 className="text-3xl font-semibold tracking-tight">Velkommen til Ukespeil</h1>
+        <p className="mt-2 text-sm text-slate-500">Velg navnet ditt for å komme raskt i gang med ukespeilet ditt.</p>
 
         {loading ? <p className="mt-4 text-sm">Laster...</p> : null}
 
@@ -49,8 +49,8 @@ export function UserSelect({ onSelect }: UserSelectProps) {
                 <button
                   className={`w-full rounded-md border px-3 py-2 text-left ${
                     isSelected
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-900'
-                      : 'border-slate-200 hover:bg-slate-50'
+                      ? 'border-indigo-300 bg-indigo-50/90 text-indigo-900 shadow-sm'
+                      : 'border-slate-200 bg-white/80 hover:bg-slate-50'
                   }`}
                   key={user.id}
                   onClick={() => setSelectedUserId(user.id)}
@@ -64,7 +64,7 @@ export function UserSelect({ onSelect }: UserSelectProps) {
         ) : null}
 
         <button
-          className="mt-6 w-full rounded-md bg-indigo-600 px-3 py-2 font-medium text-white disabled:opacity-40"
+          className="mt-6 w-full rounded-xl bg-slate-900 px-3 py-2.5 font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
           disabled={!selectedUser}
           onClick={handleConfirm}
           type="button"
