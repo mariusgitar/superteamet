@@ -163,6 +163,13 @@ export function EntryForm({
     setProjects((current) => [...current, project]);
   };
 
+  const handleReset = () => {
+    setVisibleProjectIds([]);
+    setSliderValues({});
+    setRemovableProjectIds(new Set());
+    setSuccessMessage(null);
+  };
+
   const submitEntry = async (submissionAllocations: Record<string, number>) => {
     setSubmitting(true);
     setSuccessMessage(null);
@@ -223,6 +230,15 @@ export function EntryForm({
       />
 
       {successMessage ? <p className="text-sm text-emerald-700">{successMessage}</p> : null}
+
+      <button
+        className="w-full rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-40"
+        disabled={submitting}
+        onClick={handleReset}
+        type="button"
+      >
+        Nullstill
+      </button>
 
       <button
         className="w-full rounded-md bg-indigo-600 px-4 py-2 font-medium text-white disabled:opacity-40"
