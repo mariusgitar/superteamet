@@ -13,20 +13,48 @@ interface AccuracyCardProps {
 
 const celebratedActualEntries = new Set<string>();
 
-function colorClass(color: string): string {
+function colorClasses(color: string): {
+  actualFill: string;
+  planFill: string;
+  leftBorder: string;
+} {
   switch (color.toUpperCase()) {
     case '#6366F1':
-      return 'accent-indigo-500';
+      return {
+        actualFill: 'bg-indigo-500',
+        planFill: 'bg-indigo-500/70',
+        leftBorder: 'border-l-indigo-500/60',
+      };
     case '#E86B5F':
-      return 'accent-rose-400';
+      return {
+        actualFill: 'bg-rose-400',
+        planFill: 'bg-rose-400/70',
+        leftBorder: 'border-l-rose-400/60',
+      };
     case '#F4A442':
-      return 'accent-amber-400';
+      return {
+        actualFill: 'bg-amber-400',
+        planFill: 'bg-amber-400/70',
+        leftBorder: 'border-l-amber-400/60',
+      };
     case '#6BCB8B':
-      return 'accent-emerald-400';
+      return {
+        actualFill: 'bg-emerald-400',
+        planFill: 'bg-emerald-400/70',
+        leftBorder: 'border-l-emerald-400/60',
+      };
     case '#A78BFA':
-      return 'accent-violet-400';
+      return {
+        actualFill: 'bg-violet-400',
+        planFill: 'bg-violet-400/70',
+        leftBorder: 'border-l-violet-400/60',
+      };
     default:
-      return 'accent-slate-400';
+      return {
+        actualFill: 'bg-slate-400',
+        planFill: 'bg-slate-400/70',
+        leftBorder: 'border-l-slate-400/60',
+      };
   }
 }
 
@@ -41,6 +69,7 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
   const [projects, setProjects] = useState<Project[]>([]);
   const [recentEntries, setRecentEntries] = useState<WeekEntry[]>([]);
   const [animatedScore, setAnimatedScore] = useState(0);
+  const [barsAnimatedIn, setBarsAnimatedIn] = useState(false);
 
   useEffect(() => {
     const loadData = async () => {
@@ -86,6 +115,13 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
     void confetti({ particleCount: 140, spread: 80, origin: { y: 0.55 } });
   }, [actual.id, score]);
 
+  useEffect(() => {
+    setBarsAnimatedIn(false);
+    const timer = window.setTimeout(() => setBarsAnimatedIn(true), 50);
+
+    return () => window.clearTimeout(timer);
+  }, [plan.id, actual.id]);
+
   const comparisonRows = useMemo(() => {
     const projectById = new Map(projects.map((project) => [project.id, project]));
     const allProjectIds = new Set([...Object.keys(plan.allocations), ...Object.keys(actual.allocations)]);
@@ -116,18 +152,28 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
 
       <div className="space-y-3">
         {comparisonRows.map((row) => {
-          const color = colorClass(row.project?.color ?? '#6366F1');
+          const colors = colorClasses(row.project?.color ?? '#6366F1');
           return (
-            <div className="rounded-xl border border-slate-200 bg-white p-3" key={row.id}>
-              <p className="mb-2 text-sm font-medium text-slate-800">{row.project?.name ?? 'Ukjent prosjekt'}</p>
-              <div className="grid grid-cols-2 gap-3">
+            <div className={`rounded-2xl border border-slate-200 border-l-[3px] bg-white p-4 ${colors.leftBorder}`} key={row.id}>
+              <p className="mb-2 w-full text-[15px] font-medium text-slate-800">{row.project?.name ?? 'Ukjent prosjekt'}</p>
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Plan {row.planned}%</p>
-                  <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.planned} />
+                  <p className="mb-1 text-xs text-gray-400">Plan {row.planned}%</p>
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${colors.planFill}`}
+                      style={{ width: `${barsAnimatedIn ? row.planned : 0}%` }}
+                    />
+                  </div>
                 </div>
                 <div>
-                  <p className="mb-1 text-xs text-slate-500">Fasit {row.actual}%</p>
-                  <progress className={`h-2 w-full rounded ${color}`} max={100} value={row.actual} />
+                  <p className="mb-1 text-xs text-gray-400">Fasit {row.actual}%</p>
+                  <div className="h-3 w-full overflow-hidden rounded-full bg-gray-100">
+                    <div
+                      className={`h-full rounded-full transition-all duration-700 ease-out ${colors.actualFill}`}
+                      style={{ width: `${barsAnimatedIn ? row.actual : 0}%` }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
