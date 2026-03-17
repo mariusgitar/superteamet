@@ -11,6 +11,7 @@ export function ProjectAdmin() {
   const [error, setError] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [showArchived, setShowArchived] = useState(false);
 
   const loadProjects = async () => {
     try {
@@ -29,13 +30,12 @@ export function ProjectAdmin() {
   }, []);
 
   const sortedProjects = useMemo(
-    () =>
-      [...projects].sort((a, b) => {
-        if (a.active !== b.active) return a.active ? -1 : 1;
-        return a.name.localeCompare(b.name, 'nb');
-      }),
+    () => [...projects].sort((a, b) => a.name.localeCompare(b.name, 'nb')),
     [projects],
   );
+
+  const activeProjects = useMemo(() => sortedProjects.filter((project) => project.active), [sortedProjects]);
+  const archivedProjects = useMemo(() => sortedProjects.filter((project) => !project.active), [sortedProjects]);
 
   const handleCreateProject = async (input: { name: string; color: string }) => {
     await createProject(input);
@@ -76,7 +76,24 @@ export function ProjectAdmin() {
 
       {error ? <p className="text-sm text-red-600">{error}</p> : null}
 
-      <ProjectList projects={sortedProjects} onEdit={setEditingProject} onToggleActive={handleToggleActive} />
+      <ProjectList projects={activeProjects} onEdit={setEditingProject} onToggleActive={handleToggleActive} />
+
+      <div className="space-y-2">
+        <button
+          aria-expanded={showArchived}
+          className="text-sm font-medium text-slate-700"
+          onClick={() => setShowArchived((current) => !current)}
+          type="button"
+        >
+          {showArchived ? '▼' : '▶'} Arkiverte prosjekter ({archivedProjects.length})
+        </button>
+
+        {showArchived ? (
+          <div className="opacity-60">
+            <ProjectList projects={archivedProjects} onEdit={setEditingProject} onToggleActive={handleToggleActive} />
+          </div>
+        ) : null}
+      </div>
 
       {showAddModal ? (
         <AddProjectModal
