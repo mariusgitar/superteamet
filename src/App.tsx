@@ -81,7 +81,7 @@ export default function App() {
       ) : null}
 
       <div className="mx-auto max-w-5xl animate-fade-up">
-        <header className="mb-5 rounded-3xl border border-white/60 bg-white/70 p-5 shadow-[0_18px_50px_-32px_rgba(79,70,229,0.45)] backdrop-blur">
+        <header className="relative z-40 mb-5 rounded-3xl border border-white/60 bg-white/70 p-5 shadow-[0_18px_50px_-32px_rgba(79,70,229,0.45)] backdrop-blur">
           <h1 className="text-3xl font-semibold tracking-tight">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-sm text-slate-500">Hei, {user.name} ✨</p>
@@ -115,7 +115,7 @@ export default function App() {
                   ≡
                 </button>
                 {mobileMenuOpen ? (
-                  <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
+                  <div className="absolute right-0 top-12 z-50 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
                     {navItems.map((item) => {
                       const isActive = view === item.key;
 
