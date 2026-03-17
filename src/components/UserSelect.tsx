@@ -33,12 +33,12 @@ export function UserSelect({ onSelect }: UserSelectProps) {
   };
 
   return (
-    <main className="min-h-screen grid place-items-center bg-slate-50 px-4">
-      <section className="w-full max-w-md rounded-xl bg-white p-6 shadow-md">
-        <h1 className="text-2xl font-semibold">Velkommen til Ukespeil</h1>
-        <p className="mt-2 text-sm text-slate-600">Velg navnet ditt for å komme i gang.</p>
+    <main className="grid min-h-screen place-items-center px-4">
+      <section className="w-full max-w-md rounded-2xl border border-violet-200/20 bg-slate-950/70 p-6 text-slate-100 shadow-[0_25px_70px_rgba(15,23,42,0.55)] backdrop-blur">
+        <h1 className="bg-gradient-to-r from-violet-100 to-indigo-200 bg-clip-text text-2xl font-semibold text-transparent">Velkommen til Ukespeil</h1>
+        <p className="mt-2 text-sm text-slate-300">Velg navnet ditt for å komme i gang.</p>
 
-        {loading ? <p className="mt-4 text-sm">Laster...</p> : null}
+        {loading ? <p className="mt-4 text-sm text-slate-300">Laster...</p> : null}
 
         {users.length > 0 ? (
           <div className="mt-4 space-y-2">
@@ -49,8 +49,8 @@ export function UserSelect({ onSelect }: UserSelectProps) {
                 <button
                   className={`w-full rounded-md border px-3 py-2 text-left ${
                     isSelected
-                      ? 'border-indigo-600 bg-indigo-50 text-indigo-900'
-                      : 'border-slate-200 hover:bg-slate-50'
+                      ? 'border-violet-300/40 bg-violet-500/20 text-violet-100'
+                      : 'border-violet-200/20 bg-slate-900/70 text-slate-200 hover:bg-violet-500/10'
                   }`}
                   key={user.id}
                   onClick={() => setSelectedUserId(user.id)}
@@ -64,7 +64,7 @@ export function UserSelect({ onSelect }: UserSelectProps) {
         ) : null}
 
         <button
-          className="mt-6 w-full rounded-md bg-indigo-600 px-3 py-2 font-medium text-white disabled:opacity-40"
+          className="mt-6 w-full rounded-xl bg-gradient-to-r from-violet-600 to-indigo-500 px-3 py-2 font-medium text-white shadow-[0_8px_24px_rgba(79,70,229,0.45)] disabled:opacity-40"
           disabled={!selectedUser}
           onClick={handleConfirm}
           type="button"

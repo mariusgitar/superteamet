@@ -72,10 +72,10 @@ export function Dashboard() {
   if (loading) {
     return (
       <section className="space-y-4">
-        <div className="rounded-lg bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
           <div className="h-8 w-full animate-pulse rounded bg-gray-200" />
         </div>
-        <div className="rounded-lg bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
           <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
           <div className="space-y-2">
             <div className="h-10 animate-pulse rounded bg-gray-200" />
@@ -83,7 +83,7 @@ export function Dashboard() {
             <div className="h-10 animate-pulse rounded bg-gray-200" />
           </div>
         </div>
-        <div className="rounded-lg bg-white p-4 shadow-sm">
+        <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
           <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
           <div className="space-y-2">
             <div className="h-8 animate-pulse rounded bg-gray-200" />
@@ -97,17 +97,17 @@ export function Dashboard() {
   }
 
   if (error) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
+    return <p className="rounded-2xl border border-red-300/20 bg-red-500/10 p-4 text-sm text-red-200">{error}</p>;
   }
 
   return (
     <section className="space-y-4">
-      <div className="rounded-lg bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <button
               className={`rounded-full border px-3 py-1 text-sm ${
-                selectedUserId === null ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:bg-slate-100'
+                selectedUserId === null ? 'border-violet-300/40 bg-violet-500/20 text-violet-100' : 'border-violet-200/25 text-slate-200 hover:bg-violet-500/10'
               }`}
               onClick={() => setSelectedUserId(null)}
               type="button"
@@ -118,8 +118,8 @@ export function Dashboard() {
               <button
                 className={`rounded-full border px-3 py-1 text-sm ${
                   selectedUserId === user.id
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 hover:bg-slate-100'
+                    ? 'border-violet-300/40 bg-violet-500/20 text-violet-100'
+                    : 'border-violet-200/25 text-slate-200 hover:bg-violet-500/10'
                 }`}
                 key={user.id}
                 onClick={() => setSelectedUserId(user.id)}
@@ -130,10 +130,10 @@ export function Dashboard() {
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex items-center gap-2 text-sm text-slate-300">
             Periode
             <select
-              className="rounded border border-slate-300 bg-white px-2 py-1"
+              className="rounded-lg border border-violet-200/25 bg-slate-900/80 px-2 py-1 text-slate-100"
               onChange={(event) => setRange(Number(event.target.value))}
               value={range}
             >
@@ -147,13 +147,13 @@ export function Dashboard() {
         </div>
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Teamfordeling per uke</h2>
+      <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">Teamfordeling per uke</h2>
         <TeamWeekChart data={chartData} projects={dashboard.projects} />
       </div>
 
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Prosjekttrend over tid</h2>
+      <div className="rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 shadow-sm">
+        <h2 className="mb-3 text-lg font-semibold text-slate-100">Prosjekttrend over tid</h2>
         <ProjectTrendChart data={chartData} projects={dashboard.projects} />
       </div>
 
