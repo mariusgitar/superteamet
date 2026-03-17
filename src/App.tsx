@@ -58,6 +58,15 @@ export default function App() {
     setMobileMenuOpen(false);
   };
 
+  const navItems: Array<{ key: AppView; label: string }> = [
+    { key: 'week', label: 'Hjem' },
+    { key: 'dashboard', label: 'Dashboard' },
+    { key: 'admin', label: 'Administrer prosjekter' }
+  ];
+
+  const activeItemClass = 'font-medium text-indigo-700';
+  const inactiveItemClass = 'text-slate-700';
+
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900">
       {toast ? (
@@ -78,20 +87,23 @@ export default function App() {
             <p className="text-sm text-slate-500">Hei, {user.name} ✨</p>
             <>
               <div className="hidden items-center gap-3 sm:flex">
-                <button
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
-                  onClick={() => switchView('dashboard')}
-                  type="button"
-                >
-                  Dashboard
-                </button>
-                <button
-                  className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
-                  onClick={() => switchView('admin')}
-                  type="button"
-                >
-                  Administrer prosjekter
-                </button>
+                {navItems.map((item) => {
+                  const isActive = view === item.key;
+
+                  return (
+                    <button
+                      key={item.key}
+                      className={`inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:border-indigo-200 hover:text-indigo-700 ${
+                        isActive ? activeItemClass : 'font-medium text-slate-600'
+                      }`}
+                      onClick={() => switchView(item.key)}
+                      type="button"
+                    >
+                      {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> : null}
+                      {item.label}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="relative sm:hidden">
@@ -104,20 +116,23 @@ export default function App() {
                 </button>
                 {mobileMenuOpen ? (
                   <div className="absolute right-0 top-12 z-20 w-52 rounded-2xl border border-slate-200 bg-white/95 p-1.5 text-sm shadow-xl">
-                    <button
-                      className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
-                      onClick={() => switchView('dashboard')}
-                      type="button"
-                    >
-                      Dashboard
-                    </button>
-                    <button
-                      className="block w-full rounded-xl px-3 py-2 text-left text-slate-700 transition hover:bg-slate-100"
-                      onClick={() => switchView('admin')}
-                      type="button"
-                    >
-                      Administrer prosjekter
-                    </button>
+                    {navItems.map((item) => {
+                      const isActive = view === item.key;
+
+                      return (
+                        <button
+                          key={item.key}
+                          className={`flex w-full items-center gap-1.5 rounded-xl px-3 py-2 text-left transition hover:bg-slate-100 ${
+                            isActive ? activeItemClass : `${inactiveItemClass} font-normal`
+                          }`}
+                          onClick={() => switchView(item.key)}
+                          type="button"
+                        >
+                          {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> : null}
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>
