@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { getWeekEntries } from '../lib/api';
 import { formatWeekLabel, weekStart } from '../lib/utils';
 import type { EntryType, User, WeekEntriesResponse } from '../types';
+import { getWeekEntries } from '../lib/api';
 import { AccuracyCard } from './AccuracyCard';
 import { EntryForm } from './EntryForm';
 
@@ -21,17 +21,17 @@ interface ActionButtonProps {
 function ActionButton({ title, subtitle, onClick, submitted = false }: ActionButtonProps) {
   return (
     <button
-      className="flex h-full w-full flex-col items-start rounded-2xl border border-violet-200/15 bg-slate-900/70 p-4 text-left transition hover:border-violet-300/35 hover:bg-violet-500/10"
+      className="flex h-full w-full flex-col items-start rounded-lg border border-slate-200 bg-slate-50 p-4 text-left transition hover:border-indigo-300 hover:bg-indigo-50"
       onClick={onClick}
       type="button"
     >
       <div className="flex w-full items-center justify-between gap-2">
-        <span className="text-base font-semibold text-slate-100">{title}</span>
+        <span className="text-base font-semibold text-slate-900">{title}</span>
         {submitted ? (
-          <span className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-xs font-medium text-emerald-200">Levert</span>
+          <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">Levert</span>
         ) : null}
       </div>
-      <span className="mt-2 text-sm text-slate-300">{subtitle}</span>
+      <span className="mt-2 text-sm text-slate-500">{subtitle}</span>
     </button>
   );
 }
@@ -78,33 +78,33 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
 
   if (loading) {
     return (
-      <section className="rounded-2xl border border-violet-200/15 bg-slate-900/65 p-5 shadow-sm">
+      <section className="rounded-lg bg-white p-5 shadow-sm">
         <div className="space-y-4">
-          <div className="h-7 w-40 animate-pulse rounded bg-slate-700/70" />
-          <div className="h-28 animate-pulse rounded-lg bg-slate-700/70" />
-          <div className="h-40 animate-pulse rounded-lg bg-slate-700/70" />
-          <div className="h-10 animate-pulse rounded-md bg-slate-700/70" />
+          <div className="h-7 w-40 animate-pulse rounded bg-gray-200" />
+          <div className="h-28 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-40 animate-pulse rounded-lg bg-gray-200" />
+          <div className="h-10 animate-pulse rounded-md bg-gray-200" />
         </div>
       </section>
     );
   }
 
   if (error) {
-    return <p className="rounded-2xl border border-red-300/25 bg-red-500/10 p-4 text-sm text-red-200">{error}</p>;
+    return <p className="rounded-lg bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
   }
 
   if (isTooFarInPastWithoutPlan) {
     return (
-      <section className="rounded-2xl border border-violet-200/15 bg-slate-900/65 p-8 text-center">
+      <section className="rounded-lg bg-white p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 w-20 text-slate-400" aria-hidden>
           <svg fill="none" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
-            <rect x="15" y="20" width="90" height="82" rx="10" className="fill-slate-800 stroke-slate-600" strokeWidth="4" />
-            <path d="M15 42H105" className="stroke-slate-600" strokeWidth="4" />
-            <path d="M36 12V30M84 12V30" className="stroke-slate-500" strokeLinecap="round" strokeWidth="6" />
-            <text x="60" y="82" textAnchor="middle" className="fill-slate-400 text-4xl font-semibold">?</text>
+            <rect x="15" y="20" width="90" height="82" rx="10" className="fill-slate-100 stroke-slate-300" strokeWidth="4" />
+            <path d="M15 42H105" className="stroke-slate-300" strokeWidth="4" />
+            <path d="M36 12V30M84 12V30" className="stroke-slate-400" strokeLinecap="round" strokeWidth="6" />
+            <text x="60" y="82" textAnchor="middle" className="fill-slate-500 text-4xl font-semibold">?</text>
           </svg>
         </div>
-        <p className="text-lg font-medium text-slate-200">Ingen registreringer for denne uka.</p>
+        <p className="text-lg font-medium text-slate-700">Ingen registreringer for denne uka.</p>
       </section>
     );
   }
@@ -115,7 +115,7 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
     return (
       <div className="space-y-2">
         <button
-          className="text-sm font-medium text-slate-300 underline-offset-2 hover:text-violet-100 hover:underline"
+          className="text-sm font-medium text-slate-600 underline-offset-2 hover:text-slate-900 hover:underline"
           onClick={() => setActiveForm(null)}
           type="button"
         >
@@ -143,12 +143,12 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           plan={entries.plan}
           userId={user.id}
         />
-        <div className="text-center text-sm text-slate-300">
-          <button className="underline-offset-2 hover:text-violet-100 hover:underline" onClick={() => setActiveForm('plan')} type="button">
+        <div className="text-center text-sm text-slate-600">
+          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
             Juster ukesplan
           </button>
-          <span className="mx-2 text-slate-500">·</span>
-          <button className="underline-offset-2 hover:text-violet-100 hover:underline" onClick={() => setActiveForm('actual')} type="button">
+          <span className="mx-2 text-slate-400">·</span>
+          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('actual')} type="button">
             Juster ukas arbeid
           </button>
         </div>
@@ -157,9 +157,9 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
   }
 
   return (
-    <section className="space-y-4 rounded-2xl border border-violet-200/15 bg-slate-900/65 p-5 shadow-sm">
+    <section className="space-y-4 rounded-lg bg-white p-5 shadow-sm">
       {entries.actual && !entries.plan ? (
-        <p className="rounded-xl border border-violet-300/20 bg-violet-500/10 px-3 py-2 text-sm text-violet-100">
+        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
           Arbeid registrert for {formatWeekLabel(currentWeekStart)} ✓
         </p>
       ) : null}
@@ -168,13 +168,13 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           onClick={() => setActiveForm('plan')}
           submitted={Boolean(entries.plan)}
           subtitle="Hva planlegger du å bruke tid på?"
-          title={entries.plan ? '✏️ Oppdater ukesplan' : '🌙 Sett ukesplan'}
+          title={entries.plan ? '✏️ Juster ukesplan' : '📅 Legg inn ukesplan'}
         />
         <ActionButton
           onClick={() => setActiveForm('actual')}
           submitted={Boolean(entries.actual)}
           subtitle="Hva brukte du faktisk tid på?"
-          title={entries.actual ? '✏️ Oppdater ukas arbeid' : '✨ Registrer ukas arbeid'}
+          title={entries.actual ? '✏️ Juster ukas arbeid' : '✅ Registrer ukas arbeid'}
         />
       </div>
     </section>
