@@ -1,4 +1,4 @@
-import type { DashboardResponse, EntryType, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
+import type { DashboardResponse, EntryType, ExportRow, Project, User, WeekEntriesResponse, WeekEntry } from '../types';
 
 const API_SECRET = import.meta.env.VITE_API_SECRET;
 
@@ -65,6 +65,15 @@ export function getRecentEntries(userId: string, limit = 20): Promise<WeekEntry[
 export function getDashboard(weeks: number): Promise<DashboardResponse> {
   const query = new URLSearchParams({ weeks: String(weeks) }).toString();
   return request<DashboardResponse>(`/api/dashboard?${query}`);
+}
+
+export function getExportRows(weeks: number): Promise<ExportRow[]> {
+  const query = new URLSearchParams({ weeks: String(weeks) }).toString();
+  return request<ExportRow[]>(`/api/export?${query}`, {
+    headers: {
+      'x-api-secret': API_SECRET,
+    },
+  });
 }
 
 interface UpsertEntryInput {
