@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { User, WeekEntry } from '../types';
-import { getDashboard, getUsers } from '../lib/api';
+import { getDashboard, getExportRows, getUsers } from '../lib/api';
 import { aggregateWeeks, buildInsights } from '../lib/dashboard';
 import { InsightPanel } from './InsightPanel';
 import { ProjectTrendChart } from './ProjectTrendChart';
@@ -12,13 +12,31 @@ const RANGE_OPTIONS = [
   { value: 26, label: 'Siste 26 uker' },
 ];
 
+const EXPORT_RANGE_OPTIONS = [
+  { value: 12, label: 'Siste 12 uker' },
+  { value: 26, label: 'Siste 26 uker' },
+  { value: 52, label: 'Siste 52 uker' },
+  { value: 999, label: 'Alt' },
+];
+
+function toCSV(
+  rows: Array<{ week_label: string; week_start: string; user_name: string; project_name: string; percent: number; hours: number }>,
+): string {
+  const headers = ['Uke', 'Ukesdatoer', 'Bruker', 'Prosjekt', 'Prosent', 'Timer'];
+  const lines = rows.map((row) => [row.week_label, row.week_start, row.user_name, row.project_name, row.percent, row.hours].join(';'));
+  return [headers.join(';'), ...lines].join('\n');
+}
+
 export function Dashboard() {
   const [range, setRange] = useState(12);
+  const [exportRange, setExportRange] = useState(52);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [dashboard, setDashboard] = useState({ weeks: [], projects: [], entries: [] as WeekEntry[] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState(false);
 
   useEffect(() => {
     const loadUsers = async () => {
@@ -47,6 +65,28 @@ export function Dashboard() {
 
     void load();
   }, [range]);
+
+  const handleExport = async () => {
+    try {
+      setExportLoading(true);
+      setExportSuccess(false);
+      const rows = await getExportRows(exportRange);
+      const csv = toCSV(rows);
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = `ukespeil-export-${new Date().toISOString().split('T')[0]}.csv`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setExportSuccess(true);
+      window.setTimeout(() => setExportSuccess(false), 2000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Klarte ikke å eksportere CSV.');
+    } finally {
+      setExportLoading(false);
+    }
+  };
 
   const filteredEntries = useMemo(
     () => (selectedUserId ? dashboard.entries.filter((entry) => entry.userId === selectedUserId) : dashboard.entries),
@@ -130,20 +170,48 @@ export function Dashboard() {
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
-            Periode
-            <select
-              className="rounded border border-slate-300 bg-white px-2 py-1"
-              onChange={(event) => setRange(Number(event.target.value))}
-              value={range}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              Periode
+              <select
+                className="rounded border border-slate-300 bg-white px-2 py-1"
+                onChange={(event) => setRange(Number(event.target.value))}
+                value={range}
+              >
+                {RANGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="flex items-center gap-2 text-sm text-slate-700">
+              Eksport
+              <select
+                className="rounded border border-slate-300 bg-white px-2 py-1"
+                onChange={(event) => setExportRange(Number(event.target.value))}
+                value={exportRange}
+              >
+                {EXPORT_RANGE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <button
+              className="rounded border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              disabled={exportLoading}
+              onClick={() => void handleExport()}
+              type="button"
             >
-              {RANGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              {exportLoading ? 'Eksporterer...' : 'Eksporter til CSV'}
+            </button>
+
+            {exportSuccess ? <p className="text-sm text-emerald-600">Lastet ned ✓</p> : null}
+          </div>
         </div>
       </div>
 
