@@ -69,12 +69,12 @@ export function ProjectSelector({
 
           return (
             <article
-              className={`relative rounded-2xl border border-slate-200/80 bg-white px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              className={`relative rounded-2xl border border-violet-200/15 bg-slate-900/70 px-4 py-4 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
               <button
                 aria-label={`Fjern ${project.name}`}
-                className="absolute right-3 top-3 h-5 w-5 rounded-full bg-slate-100 text-slate-400 transition hover:bg-slate-200 hover:text-slate-600"
+                className="absolute right-3 top-3 h-5 w-5 rounded-full bg-slate-800 text-slate-400 transition hover:bg-slate-700 hover:text-slate-200"
                 onClick={() => onRemoveProject(project.id)}
                 type="button"
               >
@@ -83,16 +83,16 @@ export function ProjectSelector({
 
               <div className="mb-3 flex items-center gap-2 pr-8">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
-                <p className="truncate text-sm font-semibold text-slate-900">{project.name}</p>
+                <p className="truncate text-sm font-semibold text-slate-100">{project.name}</p>
                 <div className="ml-auto text-right">
-                  <p className="text-sm font-medium text-slate-700">{value.toFixed(1)}</p>
-                  <p className="text-xs text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
+                  <p className="text-sm font-medium text-slate-200">{value.toFixed(1)}</p>
+                  <p className="text-xs text-slate-400">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="relative flex h-11 flex-1 items-center py-2">
-                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100/90" />
+                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-800/90" />
                   <div
                     className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
                     style={{
@@ -120,7 +120,7 @@ export function ProjectSelector({
 
       <div className="relative">
         <button
-          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          className="w-full rounded-xl border border-dashed border-violet-300/35 bg-slate-900/65 px-4 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-violet-500/10"
           onClick={() => setAddOpen((current) => !current)}
           type="button"
         >
@@ -128,14 +128,14 @@ export function ProjectSelector({
         </button>
 
         {addOpen ? (
-          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2.5 shadow-lg">
+          <div className="absolute z-20 mt-2 w-full rounded-xl border border-violet-200/20 bg-slate-900 p-2.5 shadow-lg">
             <div className="max-h-52 overflow-y-auto">
               {availableProjects.length === 0 ? (
-                <p className="px-2 py-2 text-sm text-slate-500">Ingen flere aktive prosjekter.</p>
+                <p className="px-2 py-2 text-sm text-slate-400">Ingen flere aktive prosjekter.</p>
               ) : (
                 availableProjects.map((project) => (
                   <button
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm text-slate-200 hover:bg-violet-500/10"
                     key={project.id}
                     onClick={() => {
                       onAddProject(project.id);
@@ -150,7 +150,7 @@ export function ProjectSelector({
               )}
             </div>
             <button
-              className="mt-2 w-full rounded-md border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+              className="mt-2 w-full rounded-md border-t border-violet-200/20 px-2 py-2 text-left text-sm font-medium text-violet-200 hover:bg-violet-500/10"
               onClick={() => {
                 setShowAddModal(true);
                 setAddOpen(false);
@@ -163,7 +163,7 @@ export function ProjectSelector({
         ) : null}
       </div>
 
-      <p className="text-sm text-slate-500">{summaryText}</p>
+      <p className="text-sm text-slate-400">{summaryText}</p>
 
       {showAddModal ? (
         <AddProjectModal
