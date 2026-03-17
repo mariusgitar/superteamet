@@ -46,7 +46,7 @@ export function ProjectSelector({
 
   const summaryText = totalSliderValue > 0
     ? `Totalt ca. 37.5t fordelt på ${activeCount} ${activeCount === 1 ? 'prosjekt' : 'prosjekter'}`
-    : 'Totalt ca. 0t';
+    : 'Totalt ca. 0.0t';
 
   const handleCreateProject = async (input: { name: string; color: string }) => {
     const created = await createProject(input);
@@ -69,12 +69,12 @@ export function ProjectSelector({
 
           return (
             <article
-              className={`relative rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm transition ${isMuted ? 'opacity-60' : 'opacity-100'}`}
+              className={`project-card-enter relative rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:shadow-md ${isMuted ? 'opacity-60' : 'opacity-100'}`}
               key={project.id}
             >
               <button
                 aria-label={`Fjern ${project.name}`}
-                className="absolute right-2 top-2 h-5 w-5 rounded-full bg-gray-100 text-gray-400 transition hover:bg-gray-200 hover:text-gray-600"
+                className="absolute right-2 top-2 h-5 w-5 rounded-full bg-gray-100 text-gray-400 transition-all duration-200 hover:bg-gray-200 hover:text-gray-600"
                 onClick={() => onRemoveProject(project.id)}
                 type="button"
               >
@@ -84,14 +84,15 @@ export function ProjectSelector({
               <div className="mb-2 flex items-center gap-2 pr-8">
                 <span aria-hidden className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: project.color }} />
                 <p className="truncate text-sm font-medium text-slate-800">{project.name}</p>
-                <p className="ml-auto text-sm text-slate-500">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
+                <p className="ml-auto text-sm text-gray-400">{hours === null ? '—' : `ca. ${hours.toFixed(1)}t`}</p>
               </div>
 
               <div className="flex items-center gap-3">
-                <div className="relative flex h-11 flex-1 items-center py-2">
-                  <div className="absolute inset-x-0 top-1/2 h-7 -translate-y-1/2 rounded-full bg-slate-100" />
+                <span className="text-sm text-gray-400">{value.toFixed(1)}</span>
+                <div className="relative flex h-11 flex-1 items-center py-[17px]">
+                  <div className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full bg-gray-100" />
                   <div
-                    className="absolute left-0 top-1/2 h-7 -translate-y-1/2 rounded-full"
+                    className="absolute left-0 top-1/2 h-2.5 -translate-y-1/2 rounded-full"
                     style={{
                       width: `${(value / 5) * 100}%`,
                       backgroundColor: project.color,
@@ -104,7 +105,7 @@ export function ProjectSelector({
                     max={5}
                     min={0}
                     onChange={(event) => onSliderChange(project.id, Number(event.target.value))}
-                    step={0.5}
+                    step={0.1}
                     type="range"
                     value={value}
                   />
@@ -117,7 +118,7 @@ export function ProjectSelector({
 
       <div className="relative">
         <button
-          className="w-full rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+          className="w-full rounded-xl border border-dashed border-gray-300 px-4 py-2 text-sm font-medium text-gray-400 transition-all duration-150 hover:border-gray-400 hover:bg-gray-50 hover:text-gray-600"
           onClick={() => setAddOpen((current) => !current)}
           type="button"
         >
@@ -125,14 +126,14 @@ export function ProjectSelector({
         </button>
 
         {addOpen ? (
-          <div className="absolute z-20 mt-2 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg">
+          <div className="absolute z-20 mt-2 w-full rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
             <div className="max-h-52 overflow-y-auto">
               {availableProjects.length === 0 ? (
                 <p className="px-2 py-2 text-sm text-slate-500">Ingen flere aktive prosjekter.</p>
               ) : (
                 availableProjects.map((project) => (
                   <button
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-slate-50"
+                    className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm transition-all duration-200 hover:bg-slate-50"
                     key={project.id}
                     onClick={() => {
                       onAddProject(project.id);
@@ -147,7 +148,7 @@ export function ProjectSelector({
               )}
             </div>
             <button
-              className="mt-2 w-full rounded-md border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+              className="mt-2 w-full rounded-md border-t border-slate-200 px-2 py-2 text-left text-sm font-medium text-indigo-700 transition-all duration-200 hover:bg-indigo-50"
               onClick={() => {
                 setShowAddModal(true);
                 setAddOpen(false);
@@ -160,7 +161,7 @@ export function ProjectSelector({
         ) : null}
       </div>
 
-      <p className="text-sm text-slate-500">{summaryText}</p>
+      <p className="text-sm text-gray-400">{summaryText}</p>
 
       {showAddModal ? (
         <AddProjectModal

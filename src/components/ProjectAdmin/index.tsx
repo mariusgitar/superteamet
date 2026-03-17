@@ -58,7 +58,7 @@ export function ProjectAdmin() {
   };
 
   if (loading) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-slate-600 shadow-sm">Laster prosjekter...</p>;
+    return <p className="rounded-lg bg-white p-4 text-sm text-gray-400 shadow-sm">Laster prosjekter...</p>;
   }
 
   return (
@@ -66,7 +66,7 @@ export function ProjectAdmin() {
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Prosjektadministrasjon</h2>
         <button
-          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white"
+          className="rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 px-3 py-2 text-sm font-medium tracking-wide text-white"
           onClick={() => setShowAddModal(true)}
           type="button"
         >
@@ -74,7 +74,7 @@ export function ProjectAdmin() {
         </button>
       </div>
 
-      {error ? <p className="text-sm text-red-600">{error}</p> : null}
+      {error ? <p className="text-sm text-red-400">{error}</p> : null}
 
       <ProjectList projects={activeProjects} onEdit={setEditingProject} onToggleActive={handleToggleActive} />
 
