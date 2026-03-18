@@ -102,9 +102,9 @@ export function Dashboard() {
   }
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-4 px-4 md:px-0">
       <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-wrap items-center gap-2">
             <button
               className={`rounded-full border px-3 py-1 text-sm ${
@@ -131,10 +131,10 @@ export function Dashboard() {
             ))}
           </div>
 
-          <label className="flex items-center gap-2 text-sm text-slate-700">
+          <label className="flex w-full items-center gap-2 text-sm text-slate-700 md:w-auto">
             Periode
             <select
-              className="rounded border border-slate-300 bg-white px-2 py-1"
+              className="w-full rounded border border-slate-300 bg-white px-2 py-1 md:w-auto"
               onChange={(event) => setRange(Number(event.target.value))}
               value={range}
             >
@@ -150,12 +150,20 @@ export function Dashboard() {
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Teamfordeling per uke</h2>
-        <TeamWeekChart data={chartData} projects={dashboard.projects} />
+        <div className="overflow-x-auto">
+          <div className="min-w-[40rem]">
+            <TeamWeekChart data={chartData} projects={dashboard.projects} />
+          </div>
+        </div>
       </div>
 
       <div className="rounded-lg bg-white p-4 shadow-sm">
         <h2 className="mb-3 text-lg font-semibold">Prosjekttrend over tid</h2>
-        <ProjectTrendChart data={chartData} projects={dashboard.projects} />
+        <div className="overflow-x-auto">
+          <div className="min-w-[40rem]">
+            <ProjectTrendChart data={chartData} projects={dashboard.projects} />
+          </div>
+        </div>
       </div>
 
       <InsightPanel insights={insights} />
