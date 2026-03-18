@@ -21,28 +21,23 @@ const MODELS = [
 ];
 
 function getStaticGreeting(name: string): string {
-  return `Klar for ukespeil, ${name}?`;
+  return `Klar for en ny uke, ${name}?`;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  const { searchParams } = new URL(
+    req.url ?? "/api/greeting",
+    `https://${req.headers.host ?? "localhost"}`,
+  );
+  const name = searchParams.get("name")?.trim() || "deg";
+
   try {
     if (req.method !== "GET") {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
 
-    const rawName = Array.isArray(req.query.name)
-      ? req.query.name[0]
-      : req.query.name;
-    const name = rawName?.trim();
-
-    if (!name) {
-      return res.status(400).json({ error: "name is required" });
-    }
-
     if (!process.env.OPENROUTER_API_KEY) {
-      return res
-        .status(500)
-        .json({ error: "OPENROUTER_API_KEY is not configured" });
+      return res.status(200).json({ greeting: getStaticGreeting(name) });
     }
 
     for (const model of MODELS) {
@@ -54,6 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           "https://openrouter.ai/api/v1/chat/completions",
           {
             method: "POST",
+            signal: controller.signal,
             headers: {
               Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
               "Content-Type": "application/json",
@@ -72,7 +68,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 },
               ],
             }),
-            signal: controller.signal,
           },
         );
 
@@ -85,28 +80,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           if (errorMessage?.includes("No endpoints found")) {
             continue;
           }
-          return res
-            .status(200)
-            .json({ greeting: getStaticGreeting(name) });
+          throw new Error(errorMessage ?? `OpenRouter error: ${response.status}`);
         }
 
         const greeting = data?.choices?.[0]?.message?.content?.trim();
 
-        if (greeting) {
-          return res.status(200).json({ greeting });
+        if (!greeting) {
+          throw new Error("Empty response");
         }
 
-        return res.status(200).json({ greeting: getStaticGreeting(name) });
-      } catch {
-        return res.status(200).json({ greeting: getStaticGreeting(name) });
+        return res.status(200).json({ greeting });
       } finally {
         clearTimeout(timeoutId);
       }
     }
 
     return res.status(200).json({ greeting: getStaticGreeting(name) });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({ error: message });
+  } catch {
+    return res.status(200).json({ greeting: getStaticGreeting(name) });
   }
 }
