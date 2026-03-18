@@ -36,6 +36,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: "Method Not Allowed" });
     }
 
+    console.log("API key present:", !!process.env.OPENROUTER_API_KEY);
+
     if (!process.env.OPENROUTER_API_KEY) {
       return res.status(200).json({ greeting: getStaticGreeting(name) });
     }
@@ -43,9 +45,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const model of MODELS) {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
+      let response: Response | undefined;
+      let responseBody: string | undefined;
 
       try {
-        const response = await fetch(
+        console.log("Trying model:", model);
+
+        response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
           {
             method: "POST",
@@ -71,9 +77,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           },
         );
 
-        const data = (await response.json().catch(() => null)) as
-          | OpenRouterResponse
-          | null;
+        responseBody = await response.text();
+        const data = JSON.parse(responseBody) as OpenRouterResponse;
 
         if (!response.ok) {
           const errorMessage = data?.error?.message;
@@ -90,6 +95,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         return res.status(200).json({ greeting });
+      } catch (err) {
+        console.error("Greeting API error:", err);
+        console.error("OpenRouter response status:", response?.status);
+        console.error("OpenRouter response body:", responseBody);
+        throw err;
       } finally {
         clearTimeout(timeoutId);
       }
