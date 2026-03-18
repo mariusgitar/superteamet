@@ -62,6 +62,7 @@ export function Dashboard() {
     () =>
       aggregatedWeeks.map((week) => ({
         weekLabel: week.weekLabel,
+        averageUnregisteredHours: week.averageUnregisteredHours,
         ...week.byProject,
       })),
     [aggregatedWeeks],

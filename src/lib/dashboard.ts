@@ -1,11 +1,14 @@
 import type { Project, WeekEntry } from '../types';
 import { weekNumber } from './utils';
 
+const FULL_WEEK_HOURS = 37.5;
+
 export interface AggregatedWeek {
   weekStart: string;
   weekLabel: string;
   byProject: Record<string, number>;
   entries: WeekEntry[];
+  averageUnregisteredHours: number | null;
 }
 
 export function aggregateWeeks(weeks: string[], projects: Project[], entries: WeekEntry[]): AggregatedWeek[] {
@@ -34,6 +37,7 @@ export function aggregateWeeks(weeks: string[], projects: Project[], entries: We
       weekLabel: toWeekLabel(week),
       byProject,
       entries: weekEntries,
+      averageUnregisteredHours: averageUnregisteredHours(weekEntries),
     });
   }
 
@@ -41,11 +45,14 @@ export function aggregateWeeks(weeks: string[], projects: Project[], entries: We
 }
 
 export function buildInsights(aggregatedWeeks: AggregatedWeek[], projects: Project[]): string[] {
+  const unregisteredInsight = buildUnregisteredInsight(aggregatedWeeks);
+
   if (aggregatedWeeks.length === 0 || projects.length === 0) {
     return [
       'Ikke nok data til å beregne innsikter ennå.',
       'Registrer faktiske uker for å se prosjektfordeling.',
       'Når flere uker er registrert vises spredning automatisk.',
+      unregisteredInsight,
     ];
   }
 
@@ -75,7 +82,33 @@ export function buildInsights(aggregatedWeeks: AggregatedWeek[], projects: Proje
     `Mest tid gikk til ${mostTime.name} denne perioden (snitt ${mostTime.avg}%)`,
     `Prosjektet som fikk minst tid: ${leastTime.name} (snitt ${leastTime.avg}%)`,
     `Uka med mest spredning: ${spreadWeek.week.weekLabel}`,
+    unregisteredInsight,
   ];
+}
+
+function buildUnregisteredInsight(aggregatedWeeks: AggregatedWeek[]): string {
+  const unregisteredValues = aggregatedWeeks
+    .map((week) => week.averageUnregisteredHours)
+    .filter((value): value is number => value !== null);
+
+  if (unregisteredValues.length === 0) {
+    return 'Ikke nok data for tidsestimater ennå';
+  }
+
+  const average = Math.round(unregisteredValues.reduce((sum, value) => sum + value, 0) / unregisteredValues.length);
+  return `Gjennomsnittlig uregistrert tid: ~${average} t/uke`;
+}
+
+function averageUnregisteredHours(entries: WeekEntry[]): number | null {
+  const unregisteredValues = entries
+    .filter((entry) => entry.inputMode === 'hours' && typeof entry.totalHours === 'number')
+    .map((entry) => Math.max(0, FULL_WEEK_HOURS - entry.totalHours));
+
+  if (unregisteredValues.length === 0) {
+    return null;
+  }
+
+  return unregisteredValues.reduce((sum, value) => sum + value, 0) / unregisteredValues.length;
 }
 
 function weekSpread(entries: WeekEntry[]): number {
