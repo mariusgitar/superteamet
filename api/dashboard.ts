@@ -9,6 +9,7 @@ interface EntryRow {
   allocations: Record<string, number>;
   hours: Record<string, number> | null;
   input_mode: 'slider' | 'hours';
+  total_hours: number | null;
   submitted_at: string;
 }
 
@@ -58,7 +59,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const entries = await sql<EntryRow[]>`
-      SELECT id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
+      SELECT
+        id,
+        user_id,
+        week_start,
+        type,
+        allocations,
+        hours,
+        input_mode,
+        CASE
+          WHEN input_mode = 'hours' AND hours IS NOT NULL THEN (
+            SELECT COALESCE(SUM((value)::numeric), 0)::float8
+            FROM jsonb_each_text(hours)
+          )
+          ELSE NULL
+        END AS total_hours,
+        submitted_at
       FROM week_entries
       WHERE type = 'actual' AND week_start IN ${sql(weekValues)}
       ORDER BY week_start ASC, submitted_at ASC
@@ -75,6 +91,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         allocations: row.allocations,
         hours: row.hours ?? undefined,
         inputMode: row.input_mode ?? 'slider',
+        totalHours: row.total_hours,
         submittedAt: row.submitted_at,
       })),
     });

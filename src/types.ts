@@ -22,6 +22,7 @@ export interface WeekEntry {
   allocations: AllocationMap;
   hours?: AllocationMap;
   inputMode?: "slider" | "hours";
+  totalHours?: number | null;
   submittedAt: string;
 }
 
