@@ -62,11 +62,11 @@ export function ProjectAdmin() {
   }
 
   return (
-    <section className="space-y-4 rounded-lg bg-slate-50">
-      <div className="flex items-center justify-between">
+    <section className="space-y-4 rounded-lg bg-slate-50 px-4">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
         <h2 className="text-xl font-semibold">Prosjektadministrasjon</h2>
         <button
-          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white"
+          className="rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white md:text-base"
           onClick={() => setShowAddModal(true)}
           type="button"
         >
@@ -81,7 +81,7 @@ export function ProjectAdmin() {
       <div className="space-y-2">
         <button
           aria-expanded={showArchived}
-          className="text-sm font-medium text-slate-700"
+          className="w-full text-left text-sm font-medium text-slate-700 md:w-auto"
           onClick={() => setShowArchived((current) => !current)}
           type="button"
         >
