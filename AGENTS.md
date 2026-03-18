@@ -8,7 +8,7 @@ Read this file at the start of every session before writing any code.
 ## Project overview
 
 **Ukespeil** is an internal team tool for weekly time reflection.
-Team members log how they *planned* to spend their week (Monday) and how they *actually* spent it (Friday).
+Team members log how they _planned_ to spend their week (Monday) and how they _actually_ spent it (Friday).
 The goal is portfolio visibility — not billing. Registration must take under 30 seconds.
 
 Core mechanic: plan vs. actual comparison with an accuracy score and streak gamification.
@@ -17,16 +17,16 @@ Core mechanic: plan vs. actual comparison with an accuracy score and streak gami
 
 ## Tech stack
 
-| Layer | Choice |
-|---|---|
-| Frontend | React + Vite + Tailwind CSS |
-| Language | TypeScript |
-| Database | Neon (serverless Postgres) |
-| API | Vercel serverless functions (`/api/*.ts`) |
-| DB client | `postgres` npm package (no ORM) |
-| Charts | Recharts |
-| Deploy | Vercel |
-| Confetti | `canvas-confetti` |
+| Layer     | Choice                                    |
+| --------- | ----------------------------------------- |
+| Frontend  | React + Vite + Tailwind CSS               |
+| Language  | TypeScript                                |
+| Database  | Neon (serverless Postgres)                |
+| API       | Vercel serverless functions (`/api/*.ts`) |
+| DB client | `postgres` npm package (no ORM)           |
+| Charts    | Recharts                                  |
+| Deploy    | Vercel                                    |
+| Confetti  | `canvas-confetti`                         |
 
 ---
 
@@ -132,41 +132,44 @@ CREATE TABLE week_entries (
 All routes live in `/api/*.ts` (Vercel serverless functions).
 Protected write routes require header `x-api-secret: <API_SECRET>` — set this env var in Vercel.
 
-| Method | Route | Description |
-|---|---|---|
-| GET | `/api/users` | List all users |
-| POST | `/api/users` | Create user `{ name }` |
-| GET | `/api/projects` | List active projects |
-| POST | `/api/projects` | Create project `{ name, color }` |
-| PATCH | `/api/projects/:id` | Update project `{ name?, color?, active? }` |
-| GET | `/api/entries?userId=&weekStart=` | Get plan+actual for a user+week |
-| POST | `/api/entries` | Upsert entry `{ userId, weekStart, type, allocations }` |
+| Method | Route                             | Description                                             |
+| ------ | --------------------------------- | ------------------------------------------------------- |
+| GET    | `/api/users`                      | List all users                                          |
+| POST   | `/api/users`                      | Create user `{ name }`                                  |
+| GET    | `/api/projects`                   | List active projects                                    |
+| POST   | `/api/projects`                   | Create project `{ name, color }`                        |
+| PATCH  | `/api/projects/:id`               | Update project `{ name?, color?, active? }`             |
+| GET    | `/api/entries?userId=&weekStart=` | Get plan+actual for a user+week                         |
+| POST   | `/api/entries`                    | Upsert entry `{ userId, weekStart, type, allocations }` |
+| GET    | `/api/greeting?name=`             | Generate a short AI greeting for the current user       |
 
 ---
 
 ## Key business logic
 
 ### weekStart(date)
+
 Returns the Monday of the week containing `date` as `YYYY-MM-DD`.
 
 ```ts
 export function weekStart(date = new Date()): string {
   const d = new Date(date);
   const day = d.getDay();
-  const diff = (day === 0 ? -6 : 1 - day);
+  const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
-  return d.toISOString().split('T')[0];
+  return d.toISOString().split("T")[0];
 }
 ```
 
 ### accuracyScore(plan, actual)
+
 Returns 0–100. Both arguments are `Record<string, number>` (allocations objects).
 Formula: `100 - (sum of absolute differences across all projects) / 2`
 
 ```ts
 export function accuracyScore(
   plan: Record<string, number>,
-  actual: Record<string, number>
+  actual: Record<string, number>,
 ): number {
   const allKeys = new Set([...Object.keys(plan), ...Object.keys(actual)]);
   let totalDiff = 0;
@@ -178,7 +181,9 @@ export function accuracyScore(
 ```
 
 ### sortProjects(projects, history)
+
 Sorts projects for display in ProjectSelector, per user:
+
 1. Used last week (pre-selected)
 2. Used ≥ 3 of last 5 weeks (frequent)
 3. Alphabetical (rest)
@@ -204,10 +209,12 @@ The `API_SECRET` header protects mutations from anonymous abuse — it is hardco
 # .env.local (never committed)
 DATABASE_URL=postgres://...          # Neon connection string (pooled)
 API_SECRET=some-random-string
+OPENROUTER_API_KEY=
 
 # .env.example (committed)
 DATABASE_URL=
 API_SECRET=
+OPENROUTER_API_KEY=
 ```
 
 Vite exposes `VITE_*` vars to the frontend. Backend-only vars (no `VITE_` prefix) are only available in `/api` functions.
@@ -266,10 +273,10 @@ Vercel CLI is optional but useful: `npx vercel dev` runs both Vite and the /api 
 ## Vercel deployment
 
 - Connect the GitHub repo to Vercel.
-- Set `DATABASE_URL`, `API_SECRET`, and `VITE_API_SECRET` as environment variables in the Vercel dashboard.
+- Set `DATABASE_URL`, `API_SECRET`, `VITE_API_SECRET`, and `OPENROUTER_API_KEY` as environment variables in the Vercel dashboard.
 - Framework preset: **Vite**.
 - Build command: `npm run build` / Output: `dist`.
 
 ---
 
-*Last updated: project kickoff. Update this file when the data model, routes, or stack changes.*
+_Last updated: project kickoff. Update this file when the data model, routes, or stack changes._
