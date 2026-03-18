@@ -114,15 +114,10 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
 
     return (
       <div className="space-y-3">
-        <button
-          className="inline-flex items-center rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:text-slate-900"
-          onClick={() => setActiveForm(null)}
-          type="button"
-        >
-          ← Tilbake
-        </button>
         <EntryForm
+          existingEntry={entries[activeForm]}
           existingPlan={isActual ? entries.plan : null}
+          onCancel={() => setActiveForm(null)}
           title={isActual ? 'Registrer ukas arbeid' : 'Legg inn ukesplan'}
           type={activeForm}
           userId={user.id}

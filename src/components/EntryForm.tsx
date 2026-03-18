@@ -12,9 +12,21 @@ interface EntryFormProps {
   weekStart: string;
   type: EntryType;
   title?: string;
+  existingEntry?: WeekEntry | null;
   existingPlan?: WeekEntry | null;
+  onCancel?: () => void;
   onSubmitted?: () => void | Promise<void>;
   onStreakMilestone?: (streak: number) => void;
+}
+
+interface InitialState {
+  defaultProjectIds: string[];
+  visibleProjectIds: string[];
+  sliderValues: Record<string, number>;
+  selectedProjectIds: string[];
+  hoursValues: Record<string, number>;
+  step: 'pick' | 'hours';
+  skipProjectPicker: boolean;
 }
 
 function clampToTenthStep(value: number): number {
@@ -82,12 +94,122 @@ function computeHoursAllocations(hours: Record<string, number>): Record<string, 
   return allocations;
 }
 
+function isHoursEntry(entry?: WeekEntry | null): entry is WeekEntry {
+  return Boolean(entry && entry.inputMode === 'hours' && entry.hours);
+}
+
+function buildInitialState(params: {
+  activeProjects: Project[];
+  existingEntry: WeekEntry | null;
+  existingPlan: WeekEntry | null;
+  history: WeekEntry[];
+  type: EntryType;
+}): InitialState {
+  const { activeProjects, existingEntry, existingPlan, history, type } = params;
+  const sortedProjects = sortProjects(activeProjects, history);
+
+  const recentProjectIds: string[] = [];
+  const seenRecentIds = new Set<string>();
+
+  for (const entry of history) {
+    for (const projectId of Object.keys(entry.allocations)) {
+      if (seenRecentIds.has(projectId)) continue;
+      seenRecentIds.add(projectId);
+      recentProjectIds.push(projectId);
+    }
+  }
+
+  const alphabeticalProjectIds = [...activeProjects]
+    .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+    .map((project) => project.id);
+
+  const fallbackProjectIds = [...recentProjectIds];
+  for (const projectId of alphabeticalProjectIds) {
+    if (fallbackProjectIds.length >= 6) break;
+    if (seenRecentIds.has(projectId)) continue;
+    fallbackProjectIds.push(projectId);
+  }
+
+  const sortedRecentIds = fallbackProjectIds.slice(0, 6);
+  const lastWeekAllocations = history[0]?.allocations ?? {};
+
+  const prefilledHoursSource = isHoursEntry(existingEntry)
+    ? existingEntry
+    : type === 'actual' && !existingEntry && isHoursEntry(existingPlan)
+      ? existingPlan
+      : null;
+
+  const sliderPrefillEntry = existingEntry?.inputMode === 'slider'
+    ? existingEntry
+    : type === 'actual' && !existingEntry && existingPlan?.inputMode === 'slider'
+      ? existingPlan
+      : null;
+
+  if (prefilledHoursSource?.hours) {
+    const prefilledProjectIds = Object.keys(prefilledHoursSource.hours);
+    const prefilledHours = prefilledProjectIds.reduce<Record<string, number>>((acc, projectId) => {
+      acc[projectId] = prefilledHoursSource.hours?.[projectId] ?? 0;
+      return acc;
+    }, {});
+
+    return {
+      defaultProjectIds: sortedRecentIds,
+      visibleProjectIds: sortedRecentIds,
+      sliderValues: {},
+      selectedProjectIds: prefilledProjectIds,
+      hoursValues: prefilledHours,
+      step: 'hours',
+      skipProjectPicker: true,
+    };
+  }
+
+  const selectedProjectIds = sliderPrefillEntry ? Object.keys(sliderPrefillEntry.allocations) : [];
+  const initialIds = sliderPrefillEntry
+    ? Array.from(new Set([...selectedProjectIds, ...sortedRecentIds]))
+    : type === 'actual' && existingPlan
+      ? Array.from(new Set([...Object.keys(existingPlan.allocations), ...sortedRecentIds]))
+      : sortedRecentIds;
+
+  const sliderValues = initialIds.reduce<Record<string, number>>((acc, projectId) => {
+    if (sliderPrefillEntry?.allocations[projectId] !== undefined) {
+      acc[projectId] = sliderValueFromPercent(sliderPrefillEntry.allocations[projectId]);
+      return acc;
+    }
+
+    if (type === 'actual' && existingPlan?.allocations[projectId] !== undefined) {
+      acc[projectId] = sliderValueFromPercent(existingPlan.allocations[projectId]);
+      return acc;
+    }
+
+    const lastWeekPercent = lastWeekAllocations[projectId] ?? 0;
+    acc[projectId] = projectId in lastWeekAllocations ? sliderValueFromPercent(lastWeekPercent) : 0;
+    return acc;
+  }, {});
+
+  const hoursValues = selectedProjectIds.reduce<Record<string, number>>((acc, projectId) => {
+    acc[projectId] = 0;
+    return acc;
+  }, {});
+
+  return {
+    defaultProjectIds: sortedRecentIds,
+    visibleProjectIds: initialIds,
+    sliderValues,
+    selectedProjectIds,
+    hoursValues,
+    step: 'pick',
+    skipProjectPicker: false,
+  };
+}
+
 export function EntryForm({
   userId,
   weekStart,
   type,
   title,
+  existingEntry = null,
   existingPlan = null,
+  onCancel,
   onSubmitted,
   onStreakMilestone,
 }: EntryFormProps) {
@@ -98,6 +220,7 @@ export function EntryForm({
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [hoursValues, setHoursValues] = useState<Record<string, number>>({});
   const [step, setStep] = useState<'pick' | 'hours'>('pick');
+  const [skipProjectPicker, setSkipProjectPicker] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -107,72 +230,27 @@ export function EntryForm({
     const load = async () => {
       const [activeProjects, history] = await Promise.all([getProjects(), getActualHistory(userId)]);
       const sortedProjects = sortProjects(activeProjects, history);
+      const initialState = buildInitialState({
+        activeProjects,
+        existingEntry,
+        existingPlan,
+        history,
+        type,
+      });
+
       setProjects(sortedProjects);
-
-      const recentProjectIds: string[] = [];
-      const seenRecentIds = new Set<string>();
-
-      for (const entry of history) {
-        for (const projectId of Object.keys(entry.allocations)) {
-          if (seenRecentIds.has(projectId)) continue;
-          seenRecentIds.add(projectId);
-          recentProjectIds.push(projectId);
-        }
-      }
-
-      const alphabeticalProjectIds = [...activeProjects]
-        .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
-        .map((project) => project.id);
-
-      const fallbackProjectIds = [...recentProjectIds];
-      for (const projectId of alphabeticalProjectIds) {
-        if (fallbackProjectIds.length >= 6) break;
-        if (seenRecentIds.has(projectId)) continue;
-        fallbackProjectIds.push(projectId);
-      }
-
-      const sortedRecentIds = fallbackProjectIds.slice(0, 6);
-      const lastWeekAllocations = history[0]?.allocations ?? {};
-
-      const initialIds = type === 'actual' && existingPlan
-        ? Array.from(new Set([...Object.keys(existingPlan.allocations), ...sortedRecentIds]))
-        : sortedRecentIds;
-
-      const nextSliderValues = initialIds.reduce<Record<string, number>>((acc, projectId) => {
-        if (type === 'actual' && existingPlan?.allocations[projectId] !== undefined) {
-          acc[projectId] = sliderValueFromPercent(existingPlan.allocations[projectId]);
-          return acc;
-        }
-
-        const lastWeekPercent = lastWeekAllocations[projectId] ?? 0;
-        acc[projectId] = projectId in lastWeekAllocations ? sliderValueFromPercent(lastWeekPercent) : 0;
-        return acc;
-      }, {});
-
-      const nextSelectedProjectIds = type === 'actual' && existingPlan
-        ? Object.keys(existingPlan.allocations)
-        : [];
-
-      const nextHoursValues = nextSelectedProjectIds.reduce<Record<string, number>>((acc, projectId) => {
-        if (existingPlan?.inputMode === 'hours' && existingPlan.hours?.[projectId] !== undefined) {
-          acc[projectId] = existingPlan.hours[projectId];
-          return acc;
-        }
-
-        acc[projectId] = 0;
-        return acc;
-      }, {});
-
-      setDefaultProjectIds(sortedRecentIds);
-      setVisibleProjectIds(initialIds);
-      setSliderValues(nextSliderValues);
-      setSelectedProjectIds(nextSelectedProjectIds);
-      setHoursValues(nextHoursValues);
-      setStep('pick');
+      setDefaultProjectIds(initialState.defaultProjectIds);
+      setVisibleProjectIds(initialState.visibleProjectIds);
+      setSliderValues(initialState.sliderValues);
+      setSelectedProjectIds(initialState.selectedProjectIds);
+      setHoursValues(initialState.hoursValues);
+      setStep(initialState.step);
+      setSkipProjectPicker(initialState.skipProjectPicker);
+      setSuccessMessage(null);
     };
 
     void load();
-  }, [existingPlan, type, userId]);
+  }, [existingEntry, existingPlan, type, userId]);
 
   const totalSliderValue = useMemo(
     () => Object.values(sliderValues).reduce((sum, value) => sum + value, 0),
@@ -214,6 +292,20 @@ export function EntryForm({
     setHoursValues((current) => ({ ...current, [projectId]: current[projectId] ?? 0 }));
   };
 
+  const handleAddHoursProject = (projectId: string) => {
+    setSelectedProjectIds((current) => (current.includes(projectId) ? current : [...current, projectId]));
+    setHoursValues((current) => ({ ...current, [projectId]: current[projectId] ?? 0 }));
+  };
+
+  const handleRemoveHoursProject = (projectId: string) => {
+    setSelectedProjectIds((current) => current.filter((id) => id !== projectId));
+    setHoursValues((current) => {
+      const next = { ...current };
+      delete next[projectId];
+      return next;
+    });
+  };
+
   const handleHoursChange = (projectId: string, value: number) => {
     setHoursValues((current) => ({ ...current, [projectId]: value }));
   };
@@ -228,7 +320,7 @@ export function EntryForm({
     setSliderValues({});
     setSelectedProjectIds([]);
     setHoursValues({});
-    setStep(inputMode === 'hours' ? 'pick' : 'hours');
+    setStep(skipProjectPicker ? 'hours' : inputMode === 'hours' ? 'pick' : 'hours');
     setSuccessMessage(null);
   };
 
@@ -285,6 +377,15 @@ export function EntryForm({
     await submitEntry(existingPlan.allocations, existingPlan.hours, existingPlan.inputMode === 'hours' ? 'hours' : 'slider');
   };
 
+  const handleBack = () => {
+    if (skipProjectPicker) {
+      onCancel?.();
+      return;
+    }
+
+    setStep('pick');
+  };
+
   return (
     <section className="space-y-5 rounded-3xl border border-white/80 bg-white/85 p-6 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
       <h2 className="text-2xl font-semibold tracking-tight text-slate-900">{title ?? `Registrer ${type === 'plan' ? 'plan' : 'faktisk tid'}`}</h2>
@@ -302,10 +403,13 @@ export function EntryForm({
           />
         ) : (
           <HoursInput
-            canSubmitAsPlanned={type === 'actual' && existingPlan?.inputMode === 'hours' && Boolean(existingPlan.hours)}
+            canSubmitAsPlanned={type === 'actual' && !existingEntry && existingPlan?.inputMode === 'hours' && Boolean(existingPlan.hours)}
             hours={selectedHoursValues}
-            onBack={() => setStep('pick')}
+            onAddProject={handleAddHoursProject}
+            onBack={handleBack}
             onHoursChange={handleHoursChange}
+            onProjectCreated={handleProjectCreated}
+            onRemoveProject={handleRemoveHoursProject}
             onSubmit={() => void handleSubmit()}
             onSubmitAsPlanned={() => void handleSubmitAsPlanned()}
             projects={projects}
