@@ -125,6 +125,7 @@ export function HoursInput({
 
           const value = hours[projectId] ?? 0;
           const activeQuickHour = closestQuickHour(value);
+          const showCustomValuePill = value > 0 && activeQuickHour === null;
           const editing = editingProjectId === projectId;
 
           return (
@@ -202,7 +203,7 @@ export function HoursInput({
                     aria-label={`Skriv egendefinerte timer for ${project.name}`}
                     className="rounded-xl border border-slate-300 px-3 py-2 text-sm transition hover:border-slate-400"
                     onClick={() => openCustomInput(project.id)}
-                    style={value > 0 && activeQuickHour === null
+                    style={showCustomValuePill
                       ? {
                           borderColor: project.color,
                           backgroundColor: hexToRgba(project.color, 0.12),
@@ -212,6 +213,22 @@ export function HoursInput({
                   >
                     ✏️
                   </button>
+                  {showCustomValuePill ? (
+                    <button
+                      aria-label={`Fjern ${formatHours(value)} timer for ${project.name}`}
+                      className="inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm font-medium transition"
+                      onClick={() => onHoursChange(project.id, 0)}
+                      style={{
+                        borderColor: project.color,
+                        backgroundColor: project.color,
+                        color: '#fff',
+                      }}
+                      type="button"
+                    >
+                      <span>{`${formatHours(value)}t`}</span>
+                      <span aria-hidden className="text-xs leading-none">✕</span>
+                    </button>
+                  ) : null}
                 </div>
               )}
             </article>
