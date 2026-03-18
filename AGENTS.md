@@ -109,6 +109,8 @@ CREATE TABLE week_entries (
   week_start   DATE NOT NULL,            -- always a Monday, e.g. 2025-03-17
   type         TEXT NOT NULL,            -- 'plan' or 'actual'
   allocations  JSONB NOT NULL,           -- { "<project_uuid>": 40, "<project_uuid>": 60 }
+  hours        JSONB,                    -- actual hours per project, null for slider entries
+  input_mode   TEXT DEFAULT 'slider',    -- 'slider' or 'hours', default 'slider'
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT week_entries_unique UNIQUE (user_id, week_start, type)
 );

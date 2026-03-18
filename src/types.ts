@@ -20,6 +20,8 @@ export interface WeekEntry {
   weekStart: string;
   type: EntryType;
   allocations: AllocationMap;
+  hours?: AllocationMap;
+  inputMode?: "slider" | "hours";
   submittedAt: string;
 }
 

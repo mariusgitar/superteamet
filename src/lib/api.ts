@@ -101,6 +101,8 @@ interface UpsertEntryInput {
   weekStart: string;
   type: EntryType;
   allocations: Record<string, number>;
+  hours?: Record<string, number>;
+  inputMode?: "slider" | "hours";
 }
 
 export function upsertEntry(input: UpsertEntryInput): Promise<WeekEntry> {
