@@ -1,13 +1,14 @@
-import { useEffect, useState } from 'react';
-import { Dashboard } from './components/Dashboard';
-import { ProjectAdmin } from './components/ProjectAdmin';
-import { UserSelect } from './components/UserSelect';
-import { WeekNav } from './components/WeekNav';
-import { WeekView } from './components/WeekView';
-import { useCurrentUser } from './hooks/useCurrentUser';
-import { weekNumber, weekStart } from './lib/utils';
+import { useEffect, useState } from "react";
+import { Dashboard } from "./components/Dashboard";
+import { ProjectAdmin } from "./components/ProjectAdmin";
+import { UserSelect } from "./components/UserSelect";
+import { WeekNav } from "./components/WeekNav";
+import { WeekView } from "./components/WeekView";
+import { useCurrentUser } from "./hooks/useCurrentUser";
+import { getGreeting } from "./lib/api";
+import { weekNumber, weekStart } from "./lib/utils";
 
-type AppView = 'week' | 'dashboard' | 'admin';
+type AppView = "week" | "dashboard" | "admin";
 
 interface ToastState {
   id: number;
@@ -15,26 +16,109 @@ interface ToastState {
   visible: boolean;
 }
 
+const GREETING_STORAGE_KEY = "ukespeil_greeting";
+
+interface GreetingCache {
+  name: string;
+  greeting: string;
+}
+
 export default function App() {
   const { user, saveUser } = useCurrentUser();
   const [currentWeekStart, setCurrentWeekStart] = useState(weekStart());
-  const [view, setView] = useState<AppView>('week');
+  const [view, setView] = useState<AppView>("week");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [greeting, setGreeting] = useState<string | null>(null);
+  const [greetingVisible, setGreetingVisible] = useState(false);
 
   useEffect(() => {
-    if (view === 'week') {
+    if (view === "week") {
       document.title = `Uke ${weekNumber(currentWeekStart)} · Ukespeil`;
       return;
     }
 
-    if (view === 'dashboard') {
-      document.title = 'Dashboard · Ukespeil';
+    if (view === "dashboard") {
+      document.title = "Dashboard · Ukespeil";
       return;
     }
 
-    document.title = 'Prosjekter · Ukespeil';
+    document.title = "Prosjekter · Ukespeil";
   }, [view, currentWeekStart]);
+
+  useEffect(() => {
+    if (!user) {
+      setGreeting(null);
+      setGreetingVisible(false);
+      return;
+    }
+
+    const fallbackGreeting = `Hei, ${user.name} ✨`;
+    let cancelled = false;
+    let timeoutId: number | undefined;
+
+    const showGreeting = (nextGreeting: string) => {
+      setGreeting(nextGreeting);
+      setGreetingVisible(false);
+
+      window.requestAnimationFrame(() => {
+        if (!cancelled) {
+          setGreetingVisible(true);
+        }
+      });
+    };
+
+    try {
+      const cachedValue = sessionStorage.getItem(GREETING_STORAGE_KEY);
+      if (cachedValue) {
+        const parsed = JSON.parse(cachedValue) as GreetingCache;
+        if (parsed.name === user.name && parsed.greeting) {
+          showGreeting(parsed.greeting);
+          return () => {
+            cancelled = true;
+          };
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(GREETING_STORAGE_KEY);
+    }
+
+    const controller = new AbortController();
+    timeoutId = window.setTimeout(() => controller.abort(), 5000);
+
+    void getGreeting(user.name, controller.signal)
+      .then((response) => {
+        if (cancelled) {
+          return;
+        }
+
+        const nextGreeting = response.greeting.trim() || fallbackGreeting;
+        sessionStorage.setItem(
+          GREETING_STORAGE_KEY,
+          JSON.stringify({
+            name: user.name,
+            greeting: nextGreeting,
+          } satisfies GreetingCache),
+        );
+        showGreeting(nextGreeting);
+      })
+      .catch(() => {
+        // Silently keep the fallback greeting.
+      })
+      .finally(() => {
+        if (timeoutId !== undefined) {
+          window.clearTimeout(timeoutId);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (timeoutId !== undefined) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+  }, [user]);
 
   if (!user) {
     return <UserSelect onSelect={saveUser} />;
@@ -42,10 +126,16 @@ export default function App() {
 
   const showStreakMilestone = (streak: number) => {
     const id = Date.now();
-    setToast({ id, message: `🔥 ${streak} uker på rad! Imponerende.`, visible: true });
+    setToast({
+      id,
+      message: `🔥 ${streak} uker på rad! Imponerende.`,
+      visible: true,
+    });
 
     window.setTimeout(() => {
-      setToast((current) => (current?.id === id ? { ...current, visible: false } : current));
+      setToast((current) =>
+        current?.id === id ? { ...current, visible: false } : current,
+      );
     }, 2600);
 
     window.setTimeout(() => {
@@ -59,20 +149,21 @@ export default function App() {
   };
 
   const navItems: Array<{ key: AppView; label: string }> = [
-    { key: 'week', label: 'Hjem' },
-    { key: 'dashboard', label: 'Dashboard' },
-    { key: 'admin', label: 'Administrer prosjekter' }
+    { key: "week", label: "Hjem" },
+    { key: "dashboard", label: "Dashboard" },
+    { key: "admin", label: "Administrer prosjekter" },
   ];
 
-  const activeItemClass = 'font-medium text-indigo-700';
-  const inactiveItemClass = 'text-slate-700';
+  const activeItemClass = "font-medium text-indigo-700";
+  const inactiveItemClass = "text-slate-700";
+  const fallbackGreeting = `Hei, ${user.name} ✨`;
 
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900">
       {toast ? (
         <div
           className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl bg-slate-900/95 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-white/20 transition-opacity duration-300 ${
-            toast.visible ? 'opacity-100' : 'opacity-0'
+            toast.visible ? "opacity-100" : "opacity-0"
           }`}
           role="status"
         >
@@ -84,7 +175,17 @@ export default function App() {
         <header className="relative z-40 mb-5 rounded-3xl border border-white/60 bg-white/70 p-5 shadow-[0_18px_50px_-32px_rgba(79,70,229,0.45)] backdrop-blur">
           <h1 className="text-3xl font-semibold tracking-tight">Ukespeil</h1>
           <div className="mt-1 flex items-center justify-between">
-            <p className="text-sm text-slate-500">Hei, {user.name} ✨</p>
+            <p
+              className={`text-sm text-slate-500 transition-opacity duration-[400ms] ${
+                greeting
+                  ? greetingVisible
+                    ? "opacity-100"
+                    : "opacity-0"
+                  : "opacity-100"
+              }`}
+            >
+              {greeting ?? fallbackGreeting}
+            </p>
             <>
               <div className="hidden items-center gap-3 sm:flex">
                 {navItems.map((item) => {
@@ -94,12 +195,16 @@ export default function App() {
                     <button
                       key={item.key}
                       className={`inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs transition hover:border-indigo-200 hover:text-indigo-700 ${
-                        isActive ? activeItemClass : 'font-medium text-slate-600'
+                        isActive
+                          ? activeItemClass
+                          : "font-medium text-slate-600"
                       }`}
                       onClick={() => switchView(item.key)}
                       type="button"
                     >
-                      {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> : null}
+                      {isActive ? (
+                        <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                      ) : null}
                       {item.label}
                     </button>
                   );
@@ -123,12 +228,16 @@ export default function App() {
                         <button
                           key={item.key}
                           className={`flex w-full items-center gap-1.5 rounded-xl px-3 py-2 text-left transition hover:bg-slate-100 ${
-                            isActive ? activeItemClass : `${inactiveItemClass} font-normal`
+                            isActive
+                              ? activeItemClass
+                              : `${inactiveItemClass} font-normal`
                           }`}
                           onClick={() => switchView(item.key)}
                           type="button"
                         >
-                          {isActive ? <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" /> : null}
+                          {isActive ? (
+                            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400" />
+                          ) : null}
                           {item.label}
                         </button>
                       );
@@ -140,9 +249,12 @@ export default function App() {
           </div>
         </header>
 
-        {view === 'week' ? (
+        {view === "week" ? (
           <>
-            <WeekNav currentWeekStart={currentWeekStart} onChangeWeek={setCurrentWeekStart} />
+            <WeekNav
+              currentWeekStart={currentWeekStart}
+              onChangeWeek={setCurrentWeekStart}
+            />
             <WeekView
               currentWeekStart={currentWeekStart}
               onStreakMilestone={showStreakMilestone}
@@ -151,11 +263,11 @@ export default function App() {
           </>
         ) : null}
 
-        {view === 'admin' ? (
+        {view === "admin" ? (
           <>
             <button
               className="mb-3 inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-600 transition hover:text-slate-900"
-              onClick={() => switchView('week')}
+              onClick={() => switchView("week")}
               type="button"
             >
               ← Tilbake
@@ -164,11 +276,11 @@ export default function App() {
           </>
         ) : null}
 
-        {view === 'dashboard' ? (
+        {view === "dashboard" ? (
           <>
             <button
               className="mb-3 inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-sm text-slate-600 transition hover:text-slate-900"
-              onClick={() => switchView('week')}
+              onClick={() => switchView("week")}
               type="button"
             >
               ← Tilbake

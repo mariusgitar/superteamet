@@ -1,4 +1,4 @@
-export type EntryType = 'plan' | 'actual';
+export type EntryType = "plan" | "actual";
 
 export interface User {
   id: string;
@@ -32,4 +32,8 @@ export interface DashboardResponse {
   weeks: string[];
   projects: Project[];
   entries: WeekEntry[];
+}
+
+export interface GreetingResponse {
+  greeting: string;
 }
