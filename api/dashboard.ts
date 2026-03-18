@@ -7,6 +7,8 @@ interface EntryRow {
   week_start: string;
   type: 'plan' | 'actual';
   allocations: Record<string, number>;
+  hours: Record<string, number> | null;
+  input_mode: 'slider' | 'hours';
   submitted_at: string;
 }
 
@@ -56,7 +58,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const entries = await sql<EntryRow[]>`
-      SELECT id, user_id, week_start, type, allocations, submitted_at
+      SELECT id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
       FROM week_entries
       WHERE type = 'actual' AND week_start IN ${sql(weekValues)}
       ORDER BY week_start ASC, submitted_at ASC
@@ -71,6 +73,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         weekStart: row.week_start,
         type: row.type,
         allocations: row.allocations,
+        hours: row.hours ?? undefined,
+        inputMode: row.input_mode ?? 'slider',
         submittedAt: row.submitted_at,
       })),
     });
