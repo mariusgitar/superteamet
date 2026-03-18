@@ -15,9 +15,9 @@ const SYSTEM_PROMPT =
   'Du er en vennlig og litt humoristisk assistent for et innovasjonsteam i en norsk kommune. Generer en kort, unik velkomst-hilsen på norsk (maks 8 ord) til brukeren. Hilsenen skal ha lett design thinking- eller lean startup-preg — gjerne en liten metafor, et konstruktivt spark eller en leken referanse til eksperimentering, læring eller iterasjon. Ikke bruk "Hei" som første ord. Returner kun hilsenen, ingen forklaringer.';
 
 const MODELS = [
+  "mistralai/mistral-small-2603",
+  "openrouter/hunter-alpha",
   "google/gemini-2.5-flash-lite",
-  "google/gemini-2.0-flash-exp:free",
-  "meta-llama/llama-3.2-3b-instruct:free",
 ];
 
 function getStaticGreeting(name: string): string {
