@@ -36,7 +36,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const rangeRows = await sql<WeekRow[]>`
       SELECT DISTINCT week_start
       FROM week_entries
-      WHERE type = 'actual'
       ORDER BY week_start DESC
       LIMIT ${weekCount}
     `;
@@ -76,7 +75,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         END AS total_hours,
         submitted_at
       FROM week_entries
-      WHERE type = 'actual' AND week_start IN ${sql(weekValues)}
+      WHERE week_start IN ${sql(weekValues)}
       ORDER BY week_start ASC, submitted_at ASC
     `;
 

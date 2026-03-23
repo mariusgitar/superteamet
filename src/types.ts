@@ -37,6 +37,12 @@ export interface DashboardResponse {
   entries: WeekEntry[];
 }
 
+export interface DashboardWeekResponse {
+  users: User[];
+  projects: Project[];
+  entries: WeekEntry[];
+}
+
 export interface GreetingResponse {
   greeting: string;
 }
