@@ -40,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       LIMIT ${weekCount}
     `;
 
-    const weekValues = rangeRows.map((row) => row.week_start).sort((a, b) => a.localeCompare(b));
+    const weekValues = rangeRows.map((row) => row.week_start).sort((a, b) => String(a).localeCompare(String(b)));
 
     const projects = await sql<ProjectRow[]>`
       SELECT id, name, color, active

@@ -30,7 +30,7 @@ export function ProjectAdmin() {
   }, []);
 
   const sortedProjects = useMemo(
-    () => [...projects].sort((a, b) => a.name.localeCompare(b.name, 'nb')),
+    () => [...projects].sort((a, b) => String(a.name).localeCompare(String(b.name), 'nb')),
     [projects],
   );
 
