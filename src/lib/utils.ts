@@ -35,7 +35,7 @@ export function calculateStreak(entries: WeekEntry[], currentWeekStart: string):
   const completeWeeks = [...weekTypes.entries()]
     .filter(([, types]) => types.has('plan') && types.has('actual'))
     .map(([week]) => week)
-    .sort((a, b) => b.localeCompare(a));
+    .sort((a, b) => String(b).localeCompare(String(a)));
 
   const completeWeekSet = new Set(completeWeeks);
   let streak = 0;
@@ -53,7 +53,7 @@ export function calculateStreak(entries: WeekEntry[], currentWeekStart: string):
 
 export function sortProjects(projects: Project[], history: WeekEntry[]): Project[] {
   if (history.length === 0) {
-    return [...projects].sort((a, b) => a.name.localeCompare(b.name, 'nb'));
+    return [...projects].sort((a, b) => String(a.name).localeCompare(String(b.name), 'nb'));
   }
 
   const lastWeekUsed = new Set(Object.keys(history[0]?.allocations ?? {}));
@@ -74,7 +74,7 @@ export function sortProjects(projects: Project[], history: WeekEntry[]): Project
   return [...projects].sort((a, b) => {
     const rankDiff = rank(a) - rank(b);
     if (rankDiff !== 0) return rankDiff;
-    return a.name.localeCompare(b.name, 'nb');
+    return String(a.name).localeCompare(String(b.name), 'nb');
   });
 }
 

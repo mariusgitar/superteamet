@@ -120,7 +120,7 @@ function buildInitialState(params: {
   }
 
   const alphabeticalProjectIds = [...activeProjects]
-    .sort((a, b) => a.name.localeCompare(b.name, 'nb'))
+    .sort((a, b) => String(a.name).localeCompare(String(b.name), 'nb'))
     .map((project) => project.id);
 
   const fallbackProjectIds = [...recentProjectIds];
