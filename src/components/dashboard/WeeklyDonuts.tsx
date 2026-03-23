@@ -6,16 +6,18 @@ interface WeeklyDonutsProps {
 }
 
 export function WeeklyDonuts({ cards }: WeeklyDonutsProps) {
+  const safeCards = Array.isArray(cards) ? cards : [];
+
   return (
     <div className="overflow-x-auto pb-2">
       <div className="flex min-w-max gap-4">
-        {cards.map((card) => (
+        {safeCards.map((card) => (
           <article className="w-40 min-w-40 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-48 md:min-w-48" key={card.user.id}>
             <div className="relative h-40 w-full">
               <ResponsiveContainer>
                 <PieChart>
                   <Pie data={card.slices} dataKey="value" innerRadius={42} outerRadius={64} paddingAngle={2} stroke="none">
-                    {card.slices.map((slice) => (
+                    {(card.slices ?? []).map((slice) => (
                       <Cell fill={slice.color} key={slice.id} />
                     ))}
                   </Pie>
@@ -27,8 +29,8 @@ export function WeeklyDonuts({ cards }: WeeklyDonutsProps) {
               </div>
             </div>
             <div className="mt-3 space-y-1 text-xs text-slate-600">
-              {card.legendItems.length > 0 ? (
-                card.legendItems.map((item) => (
+              {(card.legendItems ?? []).length > 0 ? (
+                (card.legendItems ?? []).map((item) => (
                   <div className="flex items-center justify-between gap-2" key={item.id}>
                     <span className="truncate">{item.name}</span>
                     <span className="font-medium text-slate-900">{formatHours(item.value)}</span>

@@ -8,20 +8,23 @@ interface AccuracyHistoryChartProps {
 }
 
 export function AccuracyHistoryChart({ data, users }: AccuracyHistoryChartProps) {
-  if (data.length < 2) {
+  const safeData = Array.isArray(data) ? data : [];
+  const safeUsers = Array.isArray(users) ? users : [];
+
+  if (safeData.length < 2) {
     return <p className="text-sm text-slate-500">Trenger flere ukers data for å vise trend.</p>;
   }
 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer>
-        <LineChart data={data}>
+        <LineChart data={safeData}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="weekLabel" tick={{ fontSize: 12 }} />
           <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} />
           <Tooltip />
           <Legend />
-          {users.map((user, index) => (
+          {safeUsers.map((user, index) => (
             <Line
               connectNulls={false}
               dataKey={user.id}

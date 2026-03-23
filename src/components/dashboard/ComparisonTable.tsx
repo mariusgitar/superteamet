@@ -7,7 +7,10 @@ interface ComparisonTableProps {
 }
 
 export function ComparisonTable({ rows, users }: ComparisonTableProps) {
-  if (rows.length === 0) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const safeUsers = Array.isArray(users) ? users : [];
+
+  if (safeRows.length === 0) {
     return <p className="text-sm text-slate-500">Ingen prosjekter med registrerte timer i valgt periode.</p>;
   }
 
@@ -17,17 +20,17 @@ export function ComparisonTable({ rows, users }: ComparisonTableProps) {
         <thead>
           <tr className="text-left text-slate-500">
             <th className="px-3 py-3 font-medium">Prosjekt</th>
-            {users.map((user) => (
+            {safeUsers.map((user) => (
               <th className="px-3 py-3 font-medium" key={user.id}>{user.name}</th>
             ))}
             <th className="px-3 py-3 font-medium">Snitt</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100 bg-white">
-          {rows.map((row) => (
+          {safeRows.map((row) => (
             <tr key={row.projectId}>
               <td className="px-3 py-3 font-medium text-slate-900">{row.projectName}</td>
-              {users.map((user) => (
+              {safeUsers.map((user) => (
                 <td className="px-3 py-3 text-slate-600" key={user.id}>{row.values[user.id] === null ? '—' : formatHours(row.values[user.id] ?? 0)}</td>
               ))}
               <td className="px-3 py-3 text-slate-900">{formatHours(row.average)}</td>
