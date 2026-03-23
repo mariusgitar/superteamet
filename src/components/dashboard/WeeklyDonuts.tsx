@@ -14,6 +14,11 @@ export function WeeklyDonuts({ cards }: WeeklyDonutsProps) {
         {safeCards.map((card) => (
           <article className="w-40 min-w-40 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-48 md:min-w-48" key={card.user.id}>
             <div className="relative h-40 w-full">
+              {card.badge ? (
+                <span className="absolute right-2 top-2 z-10 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                  {card.badge}
+                </span>
+              ) : null}
               <ResponsiveContainer>
                 <PieChart>
                   <Pie data={card.slices} dataKey="value" innerRadius={42} outerRadius={64} paddingAngle={2} stroke="none">
@@ -37,7 +42,7 @@ export function WeeklyDonuts({ cards }: WeeklyDonutsProps) {
                   </div>
                 ))
               ) : (
-                <p className="text-slate-400">Ingen registreringer denne uka.</p>
+                <p className="text-slate-400">{card.emptyMessage ?? 'Ingen registreringer denne uka.'}</p>
               )}
             </div>
           </article>

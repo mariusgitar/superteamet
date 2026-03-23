@@ -1,5 +1,5 @@
 import type { AllocationMap, DashboardResponse, DashboardWeekResponse, Project, User, WeekEntry } from '../types';
-import { accuracyScore, formatWeekLabel, weekStart as getWeekStart } from './utils';
+import { accuracyScore, formatWeekLabel, weekNumber, weekStart as getWeekStart } from './utils';
 
 const FULL_WEEK_HOURS = 37.5;
 const DONUT_PROJECT_LIMIT = 5;
@@ -10,6 +10,7 @@ export interface DashboardMetric {
   value: string;
   delta: string;
   deltaTone: 'positive' | 'negative' | 'neutral';
+  sublabel?: string;
 }
 
 export interface DonutSlice {
@@ -23,8 +24,18 @@ export interface DonutCardData {
   user: User;
   totalHours: number | null;
   hasData: boolean;
+  badge?: string;
+  emptyMessage?: string;
   slices: DonutSlice[];
   legendItems: DonutSlice[];
+}
+
+export interface DonutSectionData {
+  title: string;
+  tableTitle: string;
+  emptyMessage: string;
+  cards: DonutCardData[];
+  rows: ComparisonRow[];
 }
 
 export interface ComparisonRow {
@@ -60,52 +71,62 @@ export function getPreviousWeekStart(weekStart: string): string {
 export function calculateDashboardMetrics(params: {
   currentWeek: DashboardWeekResponse;
   previousWeek: DashboardWeekResponse;
+  weekBeforePrevious: DashboardWeekResponse;
   selectedUserId: string | null;
   streakEntries: WeekEntry[];
   streakUsers: User[];
 }): DashboardMetric[] {
-  const { currentWeek, previousWeek, selectedUserId, streakEntries, streakUsers } = params;
-  const filteredUsers = selectedUserId
+  const { currentWeek, previousWeek, weekBeforePrevious, selectedUserId, streakEntries, streakUsers } = params;
+  const currentUsers = selectedUserId
     ? currentWeek.users.filter((user) => user.id === selectedUserId)
     : currentWeek.users;
+  const previousUsers = selectedUserId
+    ? previousWeek.users.filter((user) => user.id === selectedUserId)
+    : previousWeek.users;
+  const weekBeforeUsers = selectedUserId
+    ? weekBeforePrevious.users.filter((user) => user.id === selectedUserId)
+    : weekBeforePrevious.users;
 
-  const currentScope = filterEntriesByUsers(currentWeek.entries, filteredUsers);
-  const previousScope = filterEntriesByUsers(previousWeek.entries, selectedUserId ? filteredUsers : previousWeek.users);
+  const currentScope = filterEntriesByUsers(currentWeek.entries, currentUsers);
+  const previousScope = filterEntriesByUsers(previousWeek.entries, previousUsers);
+  const weekBeforeScope = filterEntriesByUsers(weekBeforePrevious.entries, weekBeforeUsers);
 
-  const currentHours = summarizeHours(currentScope);
+  const currentHasActual = currentScope.some((entry) => entry.type === 'actual');
   const previousHours = summarizeHours(previousScope);
-  const currentAccuracy = summarizeAccuracy(currentScope);
+  const weekBeforeHours = summarizeHours(weekBeforeScope);
   const previousAccuracy = summarizeAccuracy(previousScope);
-  const currentProjects = summarizeActiveProjects(currentScope);
+  const weekBeforeAccuracy = summarizeAccuracy(weekBeforeScope);
   const previousProjects = summarizeActiveProjects(previousScope);
-  const currentUnregistered = summarizeUnregistered(currentScope);
+  const weekBeforeProjects = summarizeActiveProjects(weekBeforeScope);
   const previousUnregistered = summarizeUnregistered(previousScope);
+  const weekBeforeUnregistered = summarizeUnregistered(weekBeforeScope);
   const streak = calculateTeamSubmissionStreak(streakEntries, streakUsers);
+  const currentPlanSummary = summarizePlanHours(currentScope, currentUsers.length);
 
   return [
     {
-      label: 'Timer registrert',
-      value: currentHours.total === null ? '—' : formatHours(currentHours.total),
-      delta: formatDelta({ current: currentHours.total, previous: previousHours.total, unit: 'hours' }),
-      deltaTone: getDeltaTone(currentHours.total, previousHours.total, 'higher-is-better'),
+      label: 'Timer registrert forrige uke',
+      value: previousHours.total === null ? '—' : formatHours(previousHours.total),
+      delta: formatDelta({ current: previousHours.total, previous: weekBeforeHours.total, unit: 'hours' }),
+      deltaTone: getDeltaTone(previousHours.total, weekBeforeHours.total, 'higher-is-better'),
     },
     {
       label: 'Aktive prosjekter',
-      value: String(currentProjects),
-      delta: formatDelta({ current: currentProjects, previous: previousProjects, unit: 'count' }),
-      deltaTone: getDeltaTone(currentProjects, previousProjects, 'higher-is-better'),
+      value: previousHours.total === null ? '—' : String(previousProjects),
+      delta: currentHasActual ? formatDelta({ current: previousProjects, previous: weekBeforeProjects, unit: 'count' }) : '—',
+      deltaTone: currentHasActual ? getDeltaTone(previousProjects, weekBeforeProjects, 'higher-is-better') : 'neutral',
     },
     {
-      label: 'Treffscore',
-      value: currentAccuracy === null ? '—' : `${currentAccuracy}%`,
-      delta: formatDelta({ current: currentAccuracy, previous: previousAccuracy, unit: 'percent' }),
-      deltaTone: getDeltaTone(currentAccuracy, previousAccuracy, 'higher-is-better'),
+      label: 'Treffscore forrige uke',
+      value: previousAccuracy === null ? '—' : `${previousAccuracy}%`,
+      delta: formatDelta({ current: previousAccuracy, previous: weekBeforeAccuracy, unit: 'percent' }),
+      deltaTone: getDeltaTone(previousAccuracy, weekBeforeAccuracy, 'higher-is-better'),
     },
     {
       label: 'Uregistrert tid',
-      value: currentUnregistered === null ? '—' : formatHours(currentUnregistered),
-      delta: formatDelta({ current: currentUnregistered, previous: previousUnregistered, unit: 'hours', invertTone: true }),
-      deltaTone: getDeltaTone(currentUnregistered, previousUnregistered, 'lower-is-better'),
+      value: previousUnregistered === null ? '—' : formatHours(previousUnregistered),
+      delta: formatDelta({ current: previousUnregistered, previous: weekBeforeUnregistered, unit: 'hours', invertTone: true }),
+      deltaTone: getDeltaTone(previousUnregistered, weekBeforeUnregistered, 'lower-is-better'),
     },
     {
       label: 'Team streak',
@@ -113,34 +134,49 @@ export function calculateDashboardMetrics(params: {
       delta: 'Alle leverte faktisk ukeinnsikt',
       deltaTone: 'neutral',
     },
+    {
+      label: 'Planlagte timer denne uka',
+      value: currentPlanSummary.totalHours === null ? '—' : formatHours(currentPlanSummary.totalHours),
+      sublabel: currentPlanSummary.totalHours === null
+        ? 'Ingen har lagt inn ukesplan ennå'
+        : `${currentPlanSummary.plannedUsers} av ${currentPlanSummary.teamSize} teammedlemmer har planlagt`,
+      delta: '—',
+      deltaTone: 'neutral',
+    },
   ];
 }
 
-export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: string | null): DonutCardData[] {
+export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: string | null, options?: { entryType?: 'plan' | 'actual'; badge?: string; emptyMessage?: string }): DonutCardData[] {
   const weekUsers = Array.isArray(week.users) ? week.users : [];
   const weekEntries = Array.isArray(week.entries) ? week.entries : [];
   const weekProjects = Array.isArray(week.projects) ? week.projects : [];
   const users = selectedUserId ? weekUsers.filter((user) => user.id === selectedUserId) : weekUsers;
+  const entryType = options?.entryType ?? 'actual';
+  const emptyMessage = options?.emptyMessage ?? 'Ingen registreringer denne uka.';
 
   return users.map((user) => {
-    const actual = weekEntries.find((entry) => entry.userId === user.id && entry.type === 'actual');
-    if (!actual || !actual.hours) {
+    const entry = weekEntries.find((weekEntry) => weekEntry.userId === user.id && weekEntry.type === entryType);
+    const source = entryType === 'actual' ? entry?.hours : entry?.allocations;
+
+    if (!entry || !source) {
       return {
         user,
         totalHours: null,
         hasData: false,
+        badge: options?.badge,
+        emptyMessage,
         slices: [{ id: 'empty', name: 'Ingen data', color: '#e2e8f0', value: 1 }],
         legendItems: [],
       };
     }
 
-    const byProject = Object.entries(actual.hours)
+    const byProject = Object.entries(source)
       .filter(([, value]) => value > 0)
       .map(([projectId, value]) => ({
         id: projectId,
         name: weekProjects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
         color: weekProjects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
-        value,
+        value: entryType === 'actual' ? value : percentToHours(value),
       }))
       .sort((a, b) => b.value - a.value);
 
@@ -149,6 +185,8 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
         user,
         totalHours: 0,
         hasData: false,
+        badge: options?.badge,
+        emptyMessage,
         slices: [{ id: 'empty', name: 'Ingen data', color: '#e2e8f0', value: 1 }],
         legendItems: [],
       };
@@ -162,12 +200,84 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
 
     return {
       user,
-      totalHours: actual.totalHours ?? sumAllocation(actual.hours),
+      totalHours: entryType === 'actual' ? (entry.totalHours ?? sumAllocation(source)) : allocationPercentToHours(source),
       hasData: true,
+      badge: options?.badge,
+      emptyMessage,
       slices,
       legendItems: slices.slice(0, LEGEND_PROJECT_LIMIT),
     };
   });
+}
+
+export function buildCurrentWeekSection(params: {
+  currentWeek: DashboardWeekResponse;
+  previousWeek: DashboardWeekResponse;
+  selectedUserId: string | null;
+}): DonutSectionData {
+  const { currentWeek, previousWeek, selectedUserId } = params;
+  const currentEntries = currentWeek.entries ?? [];
+  const currentWeekStart = currentEntries[0]?.weekStart ?? '';
+  const previousWeekStart = (previousWeek.entries ?? [])[0]?.weekStart ?? '';
+  const hasThisWeekActual = currentEntries.some((entry) => entry.type === 'actual');
+  const hasThisWeekPlan = currentEntries.some((entry) => entry.type === 'plan');
+  const hasPrevWeekActual = (previousWeek.entries ?? []).some((entry) => entry.type === 'actual');
+
+  if (hasThisWeekActual) {
+    return {
+      title: `Ukas arbeid (${formatWeekShortLabel(currentWeekStart)})`,
+      tableTitle: 'Team sammenligning denne uka',
+      emptyMessage: 'Ingen registreringer ennå',
+      cards: buildDonutCards(currentWeek, selectedUserId),
+      rows: buildComparisonRows({
+        entries: currentWeek.entries ?? [],
+        projects: currentWeek.projects ?? [],
+        users: currentWeek.users ?? [],
+        selectedUserId,
+        entryType: 'actual',
+      }),
+    };
+  }
+
+  if (hasThisWeekPlan) {
+    return {
+      title: `Ukesplan (${formatWeekShortLabel(currentEntries.find((entry) => entry.type === 'plan')?.weekStart ?? '')})`,
+      tableTitle: 'Team sammenligning denne uka',
+      emptyMessage: 'Ingen registreringer ennå',
+      cards: buildDonutCards(currentWeek, selectedUserId, { entryType: 'plan', badge: 'Plan', emptyMessage: 'Ingen har lagt inn ukesplan ennå.' }),
+      rows: buildComparisonRows({
+        entries: currentWeek.entries ?? [],
+        projects: currentWeek.projects ?? [],
+        users: currentWeek.users ?? [],
+        selectedUserId,
+        entryType: 'plan',
+      }),
+    };
+  }
+
+  if (hasPrevWeekActual) {
+    return {
+      title: `Forrige uke (${formatWeekShortLabel(previousWeekStart)})`,
+      tableTitle: 'Team sammenligning forrige uke',
+      emptyMessage: 'Ingen registreringer ennå',
+      cards: buildDonutCards(previousWeek, selectedUserId),
+      rows: buildComparisonRows({
+        entries: previousWeek.entries ?? [],
+        projects: previousWeek.projects ?? [],
+        users: previousWeek.users ?? [],
+        selectedUserId,
+        entryType: 'actual',
+      }),
+    };
+  }
+
+  return {
+    title: 'Ingen registreringer ennå',
+    tableTitle: 'Team sammenligning',
+    emptyMessage: 'Ingen registreringer ennå',
+    cards: [],
+    rows: [],
+  };
 }
 
 export function buildComparisonRows(params: {
@@ -176,17 +286,20 @@ export function buildComparisonRows(params: {
   users: User[];
   selectedUserId: string | null;
   aggregateByPeriod?: boolean;
+  entryType?: 'plan' | 'actual';
 }): ComparisonRow[] {
   const users = params.selectedUserId ? (params.users ?? []).filter((user) => user.id === params.selectedUserId) : (params.users ?? []);
-  const actualEntries = filterEntriesByUsers(params.entries ?? [], users).filter((entry) => entry.type === 'actual');
+  const entryType = params.entryType ?? 'actual';
+  const scopedEntries = filterEntriesByUsers(params.entries ?? [], users).filter((entry) => entry.type === entryType);
   const rowsByProject = new Map<string, Record<string, number>>();
 
-  for (const entry of actualEntries) {
-    const source = entry.hours ?? {};
+  for (const entry of scopedEntries) {
+    const source = entryType === 'actual' ? (entry.hours ?? {}) : entry.allocations;
     for (const [projectId, value] of Object.entries(source)) {
       if (value <= 0) continue;
       const row = rowsByProject.get(projectId) ?? {};
-      row[entry.userId] = (row[entry.userId] ?? 0) + value;
+      const normalizedValue = entryType === 'actual' ? value : percentToHours(value);
+      row[entry.userId] = (row[entry.userId] ?? 0) + normalizedValue;
       rowsByProject.set(projectId, row);
     }
   }
@@ -370,6 +483,36 @@ function getDeltaTone(current: number | null, previous: number | null, direction
   if (current === previous) return 'neutral';
   const improved = direction === 'higher-is-better' ? current > previous : current < previous;
   return improved ? 'positive' : 'negative';
+}
+
+function formatWeekShortLabel(weekStart: string): string {
+  if (!weekStart) return 'uke 0';
+  const date = new Date(`${weekStart}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return 'uke 0';
+  return `uke ${weekNumber(weekStart)}`;
+}
+
+function summarizePlanHours(entries: WeekEntry[], teamSize: number): { totalHours: number | null; plannedUsers: number; teamSize: number } {
+  const planEntries = entries.filter((entry) => entry.type === 'plan');
+  if (planEntries.length === 0) {
+    return { totalHours: null, plannedUsers: 0, teamSize };
+  }
+
+  const totalHours = planEntries.reduce((sum, entry) => sum + allocationPercentToHours(entry.allocations), 0);
+  return {
+    totalHours: Math.round(totalHours * 10) / 10,
+    plannedUsers: planEntries.length,
+    teamSize,
+  };
+}
+
+function allocationPercentToHours(allocations: AllocationMap): number {
+  const totalPercent = Object.values(allocations).reduce((sum, value) => sum + value, 0);
+  return percentToHours(totalPercent);
+}
+
+function percentToHours(percent: number): number {
+  return (percent / 100) * FULL_WEEK_HOURS;
 }
 
 function formatHours(value: number): string {
