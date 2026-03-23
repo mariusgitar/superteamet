@@ -133,7 +133,7 @@ export function AccuracyCard({ plan, actual, userId, currentWeekStart }: Accurac
         planned: plan.allocations[id] ?? 0,
         actual: actual.allocations[id] ?? 0,
       }))
-      .sort((a, b) => (a.project?.name ?? '').localeCompare(b.project?.name ?? '', 'nb'));
+      .sort((a, b) => String(a.project?.name ?? '').localeCompare(String(b.project?.name ?? ''), 'nb'));
   }, [projects, plan.allocations, actual.allocations]);
 
   const streak = calculateStreak(recentEntries, currentWeekStart);

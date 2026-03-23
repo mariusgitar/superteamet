@@ -31,10 +31,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(405).json({ error: 'Method Not Allowed' });
     }
 
-    const weekStart = String(req.query.weekStart ?? '');
+    const { searchParams } = new URL(req.url ?? '', `https://${req.headers.host ?? 'localhost'}`);
+    const weekStart = searchParams.get('weekStart');
 
     if (!weekStart) {
-      return res.status(400).json({ error: 'weekStart is required' });
+      return res.status(200).json({ entries: [], projects: [], users: [] });
     }
 
     const [users, projects, entries] = await Promise.all([
@@ -88,7 +89,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       })),
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return res.status(500).json({ error: message });
+    console.error('Dashboard week error:', err);
+    return res.status(500).json({ error: err instanceof Error ? err.message : String(err) });
   }
 }

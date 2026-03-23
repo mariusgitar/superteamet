@@ -315,7 +315,7 @@ function calculateTeamSubmissionStreak(entries: WeekEntry[], users: User[]): num
   const fullWeeks = [...byWeek.entries()]
     .filter(([, userIds]) => userIds.size === teamSize)
     .map(([week]) => week)
-    .sort((a, b) => b.localeCompare(a));
+    .sort((a, b) => String(b).localeCompare(String(a)));
 
   if (fullWeeks.length === 0) return 0;
 
