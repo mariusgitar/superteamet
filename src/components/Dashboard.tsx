@@ -1,43 +1,70 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { User, WeekEntry } from '../types';
-import { getDashboard, getUsers } from '../lib/api';
-import { aggregateWeeks, buildInsights } from '../lib/dashboard';
-import { InsightPanel } from './InsightPanel';
-import { ProjectTrendChart } from './ProjectTrendChart';
-import { TeamWeekChart } from './TeamWeekChart';
+import { getDashboard, getDashboardWeek, getUsers } from '../lib/api';
+import {
+  buildAccuracyHistory,
+  buildComparisonRows,
+  buildDonutCards,
+  buildTopProjectBars,
+  calculateDashboardMetrics,
+  getPreviousWeekStart,
+} from '../lib/dashboard';
+import { weekStart } from '../lib/utils';
+import type { DashboardResponse, DashboardWeekResponse, User, WeekEntry } from '../types';
+import { AccuracyHistoryChart } from './dashboard/AccuracyHistoryChart';
+import { ComparisonTable } from './dashboard/ComparisonTable';
+import { ExportButton } from './dashboard/ExportButton';
+import { HistoricalBars } from './dashboard/HistoricalBars';
+import { KpiCards } from './dashboard/KpiCards';
+import { WeeklyDonuts } from './dashboard/WeeklyDonuts';
 
-const RANGE_OPTIONS = [
+const PERIOD_OPTIONS = [
+  { value: 1, label: 'Denne uka' },
   { value: 4, label: 'Siste 4 uker' },
   { value: 12, label: 'Siste 12 uker' },
-  { value: 26, label: 'Siste 26 uker' },
-];
+] as const;
+
+const EMPTY_WEEK: DashboardWeekResponse = {
+  users: [],
+  projects: [],
+  entries: [],
+};
+
+const EMPTY_PERIOD: DashboardResponse = {
+  weeks: [],
+  projects: [],
+  entries: [],
+};
 
 export function Dashboard() {
-  const [range, setRange] = useState(12);
+  const currentWeekStart = weekStart();
+  const previousWeekStart = getPreviousWeekStart(currentWeekStart);
+  const [range, setRange] = useState<number>(1);
   const [users, setUsers] = useState<User[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const [dashboard, setDashboard] = useState({ weeks: [], projects: [], entries: [] as WeekEntry[] });
+  const [currentWeek, setCurrentWeek] = useState<DashboardWeekResponse>(EMPTY_WEEK);
+  const [previousWeek, setPreviousWeek] = useState<DashboardWeekResponse>(EMPTY_WEEK);
+  const [periodData, setPeriodData] = useState<DashboardResponse>(EMPTY_PERIOD);
+  const [streakEntries, setStreakEntries] = useState<WeekEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        setUsers(await getUsers());
-      } catch {
-        setUsers([]);
-      }
-    };
-
-    void loadUsers();
-  }, []);
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
         setError(null);
-        setDashboard(await getDashboard(range));
+        const [userList, weekData, prevWeekData, selectedPeriodData, streakData] = await Promise.all([
+          getUsers(),
+          getDashboardWeek(currentWeekStart),
+          getDashboardWeek(previousWeekStart),
+          getDashboard(range === 1 ? 1 : range),
+          getDashboard(52),
+        ]);
+        setUsers(userList);
+        setCurrentWeek(weekData);
+        setPreviousWeek(prevWeekData);
+        setPeriodData(selectedPeriodData);
+        setStreakEntries(streakData.entries);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Klarte ikke å hente dashboard-data.');
       } finally {
@@ -46,127 +73,182 @@ export function Dashboard() {
     };
 
     void load();
-  }, [range]);
+  }, [currentWeekStart, previousWeekStart, range]);
 
-  const filteredEntries = useMemo(
-    () => (selectedUserId ? dashboard.entries.filter((entry) => entry.userId === selectedUserId) : dashboard.entries),
-    [dashboard.entries, selectedUserId],
+  const headerUsers = users.length > 0 ? users : currentWeek.users;
+  const scopedUsers = useMemo(
+    () => (selectedUserId ? headerUsers.filter((user) => user.id === selectedUserId) : headerUsers),
+    [headerUsers, selectedUserId],
   );
 
-  const aggregatedWeeks = useMemo(
-    () => aggregateWeeks(dashboard.weeks, dashboard.projects, filteredEntries),
-    [dashboard.projects, dashboard.weeks, filteredEntries],
-  );
-
-  const chartData = useMemo(
+  const metrics = useMemo(
     () =>
-      aggregatedWeeks.map((week) => ({
-        weekLabel: week.weekLabel,
-        averageUnregisteredHours: week.averageUnregisteredHours,
-        ...week.byProject,
-      })),
-    [aggregatedWeeks],
+      calculateDashboardMetrics({
+        currentWeek,
+        previousWeek,
+        selectedUserId,
+        streakEntries,
+        streakUsers: headerUsers,
+      }),
+    [currentWeek, previousWeek, selectedUserId, streakEntries, headerUsers],
   );
 
-  const insights = useMemo(() => buildInsights(aggregatedWeeks, dashboard.projects), [aggregatedWeeks, dashboard.projects]);
+  const donutCards = useMemo(() => buildDonutCards(currentWeek, selectedUserId), [currentWeek, selectedUserId]);
+  const currentTableRows = useMemo(
+    () => buildComparisonRows({ entries: currentWeek.entries, projects: currentWeek.projects, users: headerUsers, selectedUserId }),
+    [currentWeek.entries, currentWeek.projects, headerUsers, selectedUserId],
+  );
+  const historicalBars = useMemo(
+    () => buildTopProjectBars(periodData.entries, periodData.projects, selectedUserId, headerUsers),
+    [periodData.entries, periodData.projects, selectedUserId, headerUsers],
+  );
+  const historyRows = useMemo(
+    () => buildComparisonRows({ entries: periodData.entries, projects: periodData.projects, users: headerUsers, selectedUserId, aggregateByPeriod: true }),
+    [periodData.entries, periodData.projects, headerUsers, selectedUserId],
+  );
+  const accuracyHistory = useMemo(
+    () => buildAccuracyHistory(periodData, headerUsers, selectedUserId),
+    [periodData, headerUsers, selectedUserId],
+  );
+
+  const hasAnyData = currentWeek.entries.length > 0 || periodData.entries.length > 0;
 
   if (loading) {
     return (
-      <section className="space-y-4">
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <div className="h-8 w-full animate-pulse rounded bg-gray-200" />
-        </div>
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
-          <div className="space-y-2">
-            <div className="h-10 animate-pulse rounded bg-gray-200" />
-            <div className="h-10 animate-pulse rounded bg-gray-200" />
-            <div className="h-10 animate-pulse rounded bg-gray-200" />
-          </div>
-        </div>
-        <div className="rounded-lg bg-white p-4 shadow-sm">
-          <div className="mb-3 h-6 w-56 animate-pulse rounded bg-gray-200" />
-          <div className="space-y-2">
-            <div className="h-8 animate-pulse rounded bg-gray-200" />
-            <div className="h-8 animate-pulse rounded bg-gray-200" />
-            <div className="h-8 animate-pulse rounded bg-gray-200" />
-            <div className="h-8 animate-pulse rounded bg-gray-200" />
-          </div>
+      <section className="space-y-6 px-4 md:px-0">
+        <div className="h-24 animate-pulse rounded-2xl bg-white shadow-sm" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+          {Array.from({ length: 5 }).map((_, index) => (
+            <div className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" key={index} />
+          ))}
         </div>
       </section>
     );
   }
 
   if (error) {
-    return <p className="rounded-lg bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
+    return <p className="rounded-2xl bg-white p-4 text-sm text-red-600 shadow-sm">{error}</p>;
+  }
+
+  if (!hasAnyData) {
+    return (
+      <section className="space-y-6 px-4 md:px-0">
+        <Header
+          range={range}
+          selectedUserId={selectedUserId}
+          setRange={setRange}
+          setSelectedUserId={setSelectedUserId}
+          users={headerUsers}
+        />
+        <KpiCards metrics={metrics} />
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 shadow-sm">
+          Ingen registreringer ennå. Start ved å registrere ukas arbeid.
+        </div>
+      </section>
+    );
   }
 
   return (
-    <section className="space-y-4 px-4 md:px-0">
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex flex-wrap items-center gap-2">
+    <section className="space-y-6 px-4 md:px-0">
+      <Header
+        range={range}
+        selectedUserId={selectedUserId}
+        setRange={setRange}
+        setSelectedUserId={setSelectedUserId}
+        users={headerUsers}
+      />
+
+      <div>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900">Nøkkeltall</h2>
+        <KpiCards metrics={metrics} />
+      </div>
+
+      {range === 1 ? (
+        <>
+          <div>
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">Denne uka</h2>
+            <WeeklyDonuts cards={donutCards} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-4 text-base font-semibold text-slate-900">Team sammenligning denne uka</h3>
+            <ComparisonTable rows={currentTableRows} users={scopedUsers} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="mb-4 text-lg font-semibold text-slate-900">Historisk</h2>
+            <h3 className="mb-3 text-base font-semibold text-slate-900">Topp 5 prosjekter</h3>
+            <HistoricalBars data={historicalBars} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-3 text-base font-semibold text-slate-900">Treffscore-historikk per person</h3>
+            <AccuracyHistoryChart data={accuracyHistory} users={scopedUsers} />
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h3 className="mb-4 text-base font-semibold text-slate-900">Sammenligningstabell</h3>
+            <ComparisonTable rows={historyRows} users={scopedUsers} />
+          </div>
+        </>
+      )}
+    </section>
+  );
+}
+
+interface HeaderProps {
+  users: User[];
+  selectedUserId: string | null;
+  range: number;
+  setSelectedUserId: (value: string | null) => void;
+  setRange: (value: number) => void;
+}
+
+function Header({ users, selectedUserId, range, setSelectedUserId, setRange }: HeaderProps) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            className={`rounded-full border px-3 py-1 text-sm ${
+              selectedUserId === null ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:bg-slate-100'
+            }`}
+            onClick={() => setSelectedUserId(null)}
+            type="button"
+          >
+            Alle
+          </button>
+          {users.map((user) => (
             <button
               className={`rounded-full border px-3 py-1 text-sm ${
-                selectedUserId === null ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:bg-slate-100'
+                selectedUserId === user.id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:bg-slate-100'
               }`}
-              onClick={() => setSelectedUserId(null)}
+              key={user.id}
+              onClick={() => setSelectedUserId(user.id)}
               type="button"
             >
-              Alle
+              {user.name}
             </button>
-            {users.map((user) => (
-              <button
-                className={`rounded-full border px-3 py-1 text-sm ${
-                  selectedUserId === user.id
-                    ? 'border-slate-900 bg-slate-900 text-white'
-                    : 'border-slate-300 hover:bg-slate-100'
-                }`}
-                key={user.id}
-                onClick={() => setSelectedUserId(user.id)}
-                type="button"
-              >
-                {user.name}
-              </button>
-            ))}
-          </div>
+          ))}
+        </div>
 
-          <label className="flex w-full items-center gap-2 text-sm text-slate-700 md:w-auto">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
             Periode
             <select
-              className="w-full rounded border border-slate-300 bg-white px-2 py-1 md:w-auto"
+              className="rounded-lg border border-slate-300 bg-white px-3 py-2"
               onChange={(event) => setRange(Number(event.target.value))}
               value={range}
             >
-              {RANGE_OPTIONS.map((option) => (
+              {PERIOD_OPTIONS.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
               ))}
             </select>
           </label>
+          <ExportButton />
         </div>
       </div>
-
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Teamfordeling per uke</h2>
-        <div className="overflow-x-auto">
-          <div className="min-w-[40rem]">
-            <TeamWeekChart data={chartData} projects={dashboard.projects} />
-          </div>
-        </div>
-      </div>
-
-      <div className="rounded-lg bg-white p-4 shadow-sm">
-        <h2 className="mb-3 text-lg font-semibold">Prosjekttrend over tid</h2>
-        <div className="overflow-x-auto">
-          <div className="min-w-[40rem]">
-            <ProjectTrendChart data={chartData} projects={dashboard.projects} />
-          </div>
-        </div>
-      </div>
-
-      <InsightPanel insights={insights} />
-    </section>
+    </div>
   );
 }
