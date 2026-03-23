@@ -14,11 +14,12 @@ export function KpiCards({ metrics }: KpiCardsProps) {
   const safeMetrics = Array.isArray(metrics) ? metrics : [];
 
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
       {safeMetrics.map((metric) => (
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" key={metric.label}>
           <p className="text-sm text-slate-500">{metric.label}</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{metric.value}</p>
+          {metric.sublabel ? <p className="mt-2 text-sm text-slate-500">{metric.sublabel}</p> : null}
           <p className={`mt-2 text-sm ${DELTA_TONE_CLASS[metric.deltaTone]}`}>{metric.delta}</p>
         </article>
       ))}

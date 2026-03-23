@@ -3,7 +3,7 @@ import { getDashboard, getDashboardWeek, getUsers } from '../lib/api';
 import {
   buildAccuracyHistory,
   buildComparisonRows,
-  buildDonutCards,
+  buildCurrentWeekSection,
   buildTopProjectBars,
   calculateDashboardMetrics,
   getPreviousWeekStart,
@@ -43,6 +43,7 @@ export function Dashboard() {
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [currentWeek, setCurrentWeek] = useState<DashboardWeekResponse>(EMPTY_WEEK);
   const [previousWeek, setPreviousWeek] = useState<DashboardWeekResponse>(EMPTY_WEEK);
+  const [weekBeforePrevious, setWeekBeforePrevious] = useState<DashboardWeekResponse>(EMPTY_WEEK);
   const [periodData, setPeriodData] = useState<DashboardResponse>(EMPTY_PERIOD);
   const [streakEntries, setStreakEntries] = useState<WeekEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,16 +54,19 @@ export function Dashboard() {
       try {
         setLoading(true);
         setError(null);
-        const [userList, weekData, prevWeekData, selectedPeriodData, streakData] = await Promise.all([
+        const weekBeforePreviousStart = getPreviousWeekStart(previousWeekStart);
+        const [userList, weekData, prevWeekData, weekBeforePrevData, selectedPeriodData, streakData] = await Promise.all([
           getUsers(),
           getDashboardWeek(currentWeekStart),
           getDashboardWeek(previousWeekStart),
+          getDashboardWeek(weekBeforePreviousStart),
           getDashboard(range === 1 ? 1 : range),
           getDashboard(52),
         ]);
         setUsers(userList);
         setCurrentWeek(weekData);
         setPreviousWeek(prevWeekData);
+        setWeekBeforePrevious(weekBeforePrevData);
         setPeriodData(selectedPeriodData);
         setStreakEntries(Array.isArray(streakData.entries) ? streakData.entries : []);
       } catch (e) {
@@ -97,20 +101,31 @@ export function Dashboard() {
           entries: Array.isArray(previousWeek.entries) ? previousWeek.entries : [],
           projects: Array.isArray(previousWeek.projects) ? previousWeek.projects : [],
         },
+        weekBeforePrevious: {
+          ...weekBeforePrevious,
+          users: Array.isArray(weekBeforePrevious.users) ? weekBeforePrevious.users : [],
+          entries: Array.isArray(weekBeforePrevious.entries) ? weekBeforePrevious.entries : [],
+          projects: Array.isArray(weekBeforePrevious.projects) ? weekBeforePrevious.projects : [],
+        },
         selectedUserId,
         streakEntries: Array.isArray(streakEntries) ? streakEntries : [],
         streakUsers: headerUsers,
       }),
-    [currentWeek, previousWeek, selectedUserId, streakEntries, headerUsers, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
+    [currentWeek, previousWeek, weekBeforePrevious, selectedUserId, streakEntries, headerUsers, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
   );
 
-  const donutCards = useMemo(
-    () => buildDonutCards({ ...currentWeek, users: safeCurrentWeekUsers, entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects }, selectedUserId),
-    [currentWeek, selectedUserId, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
-  );
-  const currentTableRows = useMemo(
-    () => buildComparisonRows({ entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects, users: headerUsers, selectedUserId }),
-    [safeCurrentWeekEntries, safeCurrentWeekProjects, headerUsers, selectedUserId],
+  const currentWeekSection = useMemo(
+    () => buildCurrentWeekSection({
+      currentWeek: { ...currentWeek, users: safeCurrentWeekUsers, entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects },
+      previousWeek: {
+        ...previousWeek,
+        users: Array.isArray(previousWeek.users) ? previousWeek.users : [],
+        entries: Array.isArray(previousWeek.entries) ? previousWeek.entries : [],
+        projects: Array.isArray(previousWeek.projects) ? previousWeek.projects : [],
+      },
+      selectedUserId,
+    }),
+    [currentWeek, previousWeek, selectedUserId, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
   );
   const historicalBars = useMemo(
     () => buildTopProjectBars(safePeriodEntries, safePeriodProjects, selectedUserId, headerUsers),
@@ -181,12 +196,18 @@ export function Dashboard() {
         {range === 1 ? (
           <>
             <div>
-              <h2 className="mb-4 text-lg font-semibold text-slate-900">Denne uka</h2>
-              <WeeklyDonuts cards={donutCards} />
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">{currentWeekSection.title}</h2>
+              {currentWeekSection.cards.length > 0 ? (
+                <WeeklyDonuts cards={currentWeekSection.cards} />
+              ) : (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center text-slate-500 shadow-sm">
+                  {currentWeekSection.emptyMessage}
+                </div>
+              )}
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-4 text-base font-semibold text-slate-900">Team sammenligning denne uka</h3>
-              <ComparisonTable rows={currentTableRows} users={scopedUsers} />
+              <h3 className="mb-4 text-base font-semibold text-slate-900">{currentWeekSection.tableTitle}</h3>
+              <ComparisonTable rows={currentWeekSection.rows} users={scopedUsers} />
             </div>
           </>
         ) : (
