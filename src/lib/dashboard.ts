@@ -50,6 +50,9 @@ export interface AccuracyHistoryRow {
 
 export function getPreviousWeekStart(weekStart: string): string {
   const cursor = new Date(`${weekStart}T12:00:00`);
+  if (Number.isNaN(cursor.getTime())) {
+    return getWeekStart();
+  }
   cursor.setDate(cursor.getDate() - 7);
   return getWeekStart(cursor);
 }
@@ -114,10 +117,13 @@ export function calculateDashboardMetrics(params: {
 }
 
 export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: string | null): DonutCardData[] {
-  const users = selectedUserId ? week.users.filter((user) => user.id === selectedUserId) : week.users;
+  const weekUsers = Array.isArray(week.users) ? week.users : [];
+  const weekEntries = Array.isArray(week.entries) ? week.entries : [];
+  const weekProjects = Array.isArray(week.projects) ? week.projects : [];
+  const users = selectedUserId ? weekUsers.filter((user) => user.id === selectedUserId) : weekUsers;
 
   return users.map((user) => {
-    const actual = week.entries.find((entry) => entry.userId === user.id && entry.type === 'actual');
+    const actual = weekEntries.find((entry) => entry.userId === user.id && entry.type === 'actual');
     if (!actual || !actual.hours) {
       return {
         user,
@@ -132,8 +138,8 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
       .filter(([, value]) => value > 0)
       .map(([projectId, value]) => ({
         id: projectId,
-        name: week.projects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
-        color: week.projects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
+        name: weekProjects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
+        color: weekProjects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
         value,
       }))
       .sort((a, b) => b.value - a.value);
@@ -171,8 +177,8 @@ export function buildComparisonRows(params: {
   selectedUserId: string | null;
   aggregateByPeriod?: boolean;
 }): ComparisonRow[] {
-  const users = params.selectedUserId ? params.users.filter((user) => user.id === params.selectedUserId) : params.users;
-  const actualEntries = filterEntriesByUsers(params.entries, users).filter((entry) => entry.type === 'actual');
+  const users = params.selectedUserId ? (params.users ?? []).filter((user) => user.id === params.selectedUserId) : (params.users ?? []);
+  const actualEntries = filterEntriesByUsers(params.entries ?? [], users).filter((entry) => entry.type === 'actual');
   const rowsByProject = new Map<string, Record<string, number>>();
 
   for (const entry of actualEntries) {
@@ -190,7 +196,7 @@ export function buildComparisonRows(params: {
       const registeredValues = Object.values(values).filter((value) => value > 0);
       return {
         projectId,
-        projectName: params.projects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
+        projectName: (params.projects ?? []).find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
         values: Object.fromEntries(users.map((user) => [user.id, values[user.id] ?? null])),
         average: registeredValues.length === 0 ? 0 : registeredValues.reduce((sum, value) => sum + value, 0) / registeredValues.length,
       };
@@ -199,7 +205,9 @@ export function buildComparisonRows(params: {
 }
 
 export function buildTopProjectBars(entries: WeekEntry[], projects: Project[], selectedUserId: string | null, users: User[]): TopProjectBar[] {
-  const scopedEntries = filterEntriesByUsers(entries, selectedUserId ? users.filter((user) => user.id === selectedUserId) : users)
+  const safeUsers = users ?? [];
+  const safeProjects = projects ?? [];
+  const scopedEntries = filterEntriesByUsers(entries ?? [], selectedUserId ? safeUsers.filter((user) => user.id === selectedUserId) : safeUsers)
     .filter((entry) => entry.type === 'actual');
   const totals = new Map<string, number>();
 
@@ -213,8 +221,8 @@ export function buildTopProjectBars(entries: WeekEntry[], projects: Project[], s
   const sorted = [...totals.entries()]
     .map(([projectId, hours]) => ({
       id: projectId,
-      name: projects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
-      color: projects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
+      name: safeProjects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
+      color: safeProjects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
       hours,
     }))
     .sort((a, b) => b.hours - a.hours);
@@ -231,9 +239,12 @@ export function buildTopProjectBars(entries: WeekEntry[], projects: Project[], s
 }
 
 export function buildAccuracyHistory(response: DashboardResponse, users: User[], selectedUserId: string | null): AccuracyHistoryRow[] {
-  const scopedUsers = selectedUserId ? users.filter((user) => user.id === selectedUserId) : users;
+  const safeUsers = users ?? [];
+  const safeWeeks = response.weeks ?? [];
+  const safeEntries = response.entries ?? [];
+  const scopedUsers = selectedUserId ? safeUsers.filter((user) => user.id === selectedUserId) : safeUsers;
 
-  return response.weeks
+  return safeWeeks
     .map((week) => {
       const row: AccuracyHistoryRow = {
         weekStart: week,
@@ -242,8 +253,8 @@ export function buildAccuracyHistory(response: DashboardResponse, users: User[],
       let count = 0;
 
       for (const user of scopedUsers) {
-        const plan = response.entries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'plan');
-        const actual = response.entries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'actual');
+        const plan = safeEntries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'plan');
+        const actual = safeEntries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'actual');
         const value = plan && actual ? accuracyScore(plan.allocations, actual.allocations) : null;
         row[user.id] = value;
         if (value !== null) count += 1;
@@ -255,8 +266,8 @@ export function buildAccuracyHistory(response: DashboardResponse, users: User[],
 }
 
 function filterEntriesByUsers(entries: WeekEntry[], users: User[]): WeekEntry[] {
-  const userIds = new Set(users.map((user) => user.id));
-  return entries.filter((entry) => userIds.has(entry.userId));
+  const userIds = new Set((users ?? []).map((user) => user.id));
+  return (entries ?? []).filter((entry) => userIds.has(entry.userId));
 }
 
 function summarizeHours(entries: WeekEntry[]): { total: number | null } {

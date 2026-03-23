@@ -80,6 +80,9 @@ export function sortProjects(projects: Project[], history: WeekEntry[]): Project
 
 export function formatWeekLabel(weekStartDate: string): string {
   const start = new Date(`${weekStartDate}T12:00:00`);
+  if (Number.isNaN(start.getTime())) {
+    return 'Ukjent uke';
+  }
   const end = new Date(start);
   end.setDate(start.getDate() + 4);
 
@@ -91,7 +94,11 @@ export function formatWeekLabel(weekStartDate: string): string {
 }
 
 export function weekNumber(weekStartDate: string): number {
-  return isoWeek(new Date(`${weekStartDate}T12:00:00`));
+  const date = new Date(`${weekStartDate}T12:00:00`);
+  if (Number.isNaN(date.getTime())) {
+    return 0;
+  }
+  return isoWeek(date);
 }
 
 function isoWeek(date: Date): number {

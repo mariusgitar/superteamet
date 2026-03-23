@@ -64,7 +64,7 @@ export function Dashboard() {
         setCurrentWeek(weekData);
         setPreviousWeek(prevWeekData);
         setPeriodData(selectedPeriodData);
-        setStreakEntries(streakData.entries);
+        setStreakEntries(Array.isArray(streakData.entries) ? streakData.entries : []);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Klarte ikke å hente dashboard-data.');
       } finally {
@@ -75,7 +75,13 @@ export function Dashboard() {
     void load();
   }, [currentWeekStart, previousWeekStart, range]);
 
-  const headerUsers = users.length > 0 ? users : currentWeek.users;
+  const safeUsers = Array.isArray(users) ? users : [];
+  const safeCurrentWeekUsers = Array.isArray(currentWeek.users) ? currentWeek.users : [];
+  const safeCurrentWeekEntries = Array.isArray(currentWeek.entries) ? currentWeek.entries : [];
+  const safeCurrentWeekProjects = Array.isArray(currentWeek.projects) ? currentWeek.projects : [];
+  const safePeriodEntries = Array.isArray(periodData.entries) ? periodData.entries : [];
+  const safePeriodProjects = Array.isArray(periodData.projects) ? periodData.projects : [];
+  const headerUsers = safeUsers.length > 0 ? safeUsers : safeCurrentWeekUsers;
   const scopedUsers = useMemo(
     () => (selectedUserId ? headerUsers.filter((user) => user.id === selectedUserId) : headerUsers),
     [headerUsers, selectedUserId],
@@ -84,34 +90,42 @@ export function Dashboard() {
   const metrics = useMemo(
     () =>
       calculateDashboardMetrics({
-        currentWeek,
-        previousWeek,
+        currentWeek: { ...currentWeek, users: safeCurrentWeekUsers, entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects },
+        previousWeek: {
+          ...previousWeek,
+          users: Array.isArray(previousWeek.users) ? previousWeek.users : [],
+          entries: Array.isArray(previousWeek.entries) ? previousWeek.entries : [],
+          projects: Array.isArray(previousWeek.projects) ? previousWeek.projects : [],
+        },
         selectedUserId,
-        streakEntries,
+        streakEntries: Array.isArray(streakEntries) ? streakEntries : [],
         streakUsers: headerUsers,
       }),
-    [currentWeek, previousWeek, selectedUserId, streakEntries, headerUsers],
+    [currentWeek, previousWeek, selectedUserId, streakEntries, headerUsers, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
   );
 
-  const donutCards = useMemo(() => buildDonutCards(currentWeek, selectedUserId), [currentWeek, selectedUserId]);
+  const donutCards = useMemo(
+    () => buildDonutCards({ ...currentWeek, users: safeCurrentWeekUsers, entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects }, selectedUserId),
+    [currentWeek, selectedUserId, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
+  );
   const currentTableRows = useMemo(
-    () => buildComparisonRows({ entries: currentWeek.entries, projects: currentWeek.projects, users: headerUsers, selectedUserId }),
-    [currentWeek.entries, currentWeek.projects, headerUsers, selectedUserId],
+    () => buildComparisonRows({ entries: safeCurrentWeekEntries, projects: safeCurrentWeekProjects, users: headerUsers, selectedUserId }),
+    [safeCurrentWeekEntries, safeCurrentWeekProjects, headerUsers, selectedUserId],
   );
   const historicalBars = useMemo(
-    () => buildTopProjectBars(periodData.entries, periodData.projects, selectedUserId, headerUsers),
-    [periodData.entries, periodData.projects, selectedUserId, headerUsers],
+    () => buildTopProjectBars(safePeriodEntries, safePeriodProjects, selectedUserId, headerUsers),
+    [safePeriodEntries, safePeriodProjects, selectedUserId, headerUsers],
   );
   const historyRows = useMemo(
-    () => buildComparisonRows({ entries: periodData.entries, projects: periodData.projects, users: headerUsers, selectedUserId, aggregateByPeriod: true }),
-    [periodData.entries, periodData.projects, headerUsers, selectedUserId],
+    () => buildComparisonRows({ entries: safePeriodEntries, projects: safePeriodProjects, users: headerUsers, selectedUserId, aggregateByPeriod: true }),
+    [safePeriodEntries, safePeriodProjects, headerUsers, selectedUserId],
   );
   const accuracyHistory = useMemo(
-    () => buildAccuracyHistory(periodData, headerUsers, selectedUserId),
-    [periodData, headerUsers, selectedUserId],
+    () => buildAccuracyHistory({ ...periodData, weeks: Array.isArray(periodData.weeks) ? periodData.weeks : [], projects: safePeriodProjects, entries: safePeriodEntries }, headerUsers, selectedUserId),
+    [periodData, headerUsers, selectedUserId, safePeriodProjects, safePeriodEntries],
   );
 
-  const hasAnyData = currentWeek.entries.length > 0 || periodData.entries.length > 0;
+  const hasAnyData = safeCurrentWeekEntries.length > 0 || safePeriodEntries.length > 0;
 
   if (loading) {
     return (
@@ -148,51 +162,59 @@ export function Dashboard() {
     );
   }
 
-  return (
-    <section className="space-y-6 px-4 md:px-0">
-      <Header
-        range={range}
-        selectedUserId={selectedUserId}
-        setRange={setRange}
-        setSelectedUserId={setSelectedUserId}
-        users={headerUsers}
-      />
+  try {
+    return (
+      <section className="space-y-6 px-4 md:px-0">
+        <Header
+          range={range}
+          selectedUserId={selectedUserId}
+          setRange={setRange}
+          setSelectedUserId={setSelectedUserId}
+          users={headerUsers}
+        />
 
-      <div>
-        <h2 className="mb-4 text-lg font-semibold text-slate-900">Nøkkeltall</h2>
-        <KpiCards metrics={metrics} />
-      </div>
+        <div>
+          <h2 className="mb-4 text-lg font-semibold text-slate-900">Nøkkeltall</h2>
+          <KpiCards metrics={metrics} />
+        </div>
 
-      {range === 1 ? (
-        <>
-          <div>
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Denne uka</h2>
-            <WeeklyDonuts cards={donutCards} />
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold text-slate-900">Team sammenligning denne uka</h3>
-            <ComparisonTable rows={currentTableRows} users={scopedUsers} />
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h2 className="mb-4 text-lg font-semibold text-slate-900">Historisk</h2>
-            <h3 className="mb-3 text-base font-semibold text-slate-900">Topp 5 prosjekter</h3>
-            <HistoricalBars data={historicalBars} />
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-3 text-base font-semibold text-slate-900">Treffscore-historikk per person</h3>
-            <AccuracyHistoryChart data={accuracyHistory} users={scopedUsers} />
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <h3 className="mb-4 text-base font-semibold text-slate-900">Sammenligningstabell</h3>
-            <ComparisonTable rows={historyRows} users={scopedUsers} />
-          </div>
-        </>
-      )}
-    </section>
-  );
+        {range === 1 ? (
+          <>
+            <div>
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">Denne uka</h2>
+              <WeeklyDonuts cards={donutCards} />
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="mb-4 text-base font-semibold text-slate-900">Team sammenligning denne uka</h3>
+              <ComparisonTable rows={currentTableRows} users={scopedUsers} />
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h2 className="mb-4 text-lg font-semibold text-slate-900">Historisk</h2>
+              <h3 className="mb-3 text-base font-semibold text-slate-900">Topp 5 prosjekter</h3>
+              <HistoricalBars data={historicalBars} />
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="mb-3 text-base font-semibold text-slate-900">Treffscore-historikk per person</h3>
+              <AccuracyHistoryChart data={accuracyHistory} users={scopedUsers} />
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <h3 className="mb-4 text-base font-semibold text-slate-900">Sammenligningstabell</h3>
+              <ComparisonTable rows={historyRows} users={scopedUsers} />
+            </div>
+          </>
+        )}
+      </section>
+    );
+  } catch {
+    return (
+      <p className="rounded-2xl bg-white p-4 text-sm text-red-600 shadow-sm">
+        Noe gikk galt med dashboardet. Prøv å laste siden på nytt.
+      </p>
+    );
+  }
 }
 
 interface HeaderProps {
@@ -217,7 +239,7 @@ function Header({ users, selectedUserId, range, setSelectedUserId, setRange }: H
           >
             Alle
           </button>
-          {users.map((user) => (
+          {(users ?? []).map((user) => (
             <button
               className={`rounded-full border px-3 py-1 text-sm ${
                 selectedUserId === user.id ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-300 hover:bg-slate-100'

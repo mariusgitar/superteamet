@@ -6,19 +6,21 @@ interface HistoricalBarsProps {
 }
 
 export function HistoricalBars({ data }: HistoricalBarsProps) {
-  if (data.length === 0) {
+  const safeData = Array.isArray(data) ? data : [];
+
+  if (safeData.length === 0) {
     return <p className="text-sm text-slate-500">Ingen timer registrert i valgt periode.</p>;
   }
 
   return (
     <div className="h-80 w-full">
       <ResponsiveContainer>
-        <BarChart data={data} layout="vertical" margin={{ left: 12, right: 24 }}>
+        <BarChart data={safeData} layout="vertical" margin={{ left: 12, right: 24 }}>
           <XAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} type="number" />
           <YAxis dataKey="name" type="category" width={120} />
           <Tooltip />
           <Bar dataKey="percentage" radius={[0, 10, 10, 0]}>
-            {data.map((entry) => (
+            {safeData.map((entry) => (
               <Cell fill={entry.color} key={entry.id} />
             ))}
           </Bar>

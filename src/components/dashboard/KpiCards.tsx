@@ -11,9 +11,11 @@ const DELTA_TONE_CLASS: Record<DashboardMetric['deltaTone'], string> = {
 };
 
 export function KpiCards({ metrics }: KpiCardsProps) {
+  const safeMetrics = Array.isArray(metrics) ? metrics : [];
+
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-      {metrics.map((metric) => (
+      {safeMetrics.map((metric) => (
         <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm" key={metric.label}>
           <p className="text-sm text-slate-500">{metric.label}</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{metric.value}</p>
