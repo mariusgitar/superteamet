@@ -76,9 +76,13 @@ export function Dashboard() {
 
   const safeUsers = Array.isArray(users) ? users : [];
   const safeCurrentWeekUsers = Array.isArray(currentWeek.users) ? currentWeek.users : [];
-  const safeCurrentWeekEntries = Array.isArray(currentWeek.entries) ? currentWeek.entries : [];
+  const safeCurrentWeekEntries = Array.isArray(currentWeek.entries)
+    ? currentWeek.entries.filter((entry) => entry.type === 'actual')
+    : [];
   const safeCurrentWeekProjects = Array.isArray(currentWeek.projects) ? currentWeek.projects : [];
-  const safePeriodEntries = Array.isArray(periodData.entries) ? periodData.entries : [];
+  const safePeriodEntries = Array.isArray(periodData.entries)
+    ? periodData.entries.filter((entry) => entry.type === 'actual')
+    : [];
   const safePeriodProjects = Array.isArray(periodData.projects) ? periodData.projects : [];
   const headerUsers = safeUsers.length > 0 ? safeUsers : safeCurrentWeekUsers;
   const scopedUsers = useMemo(
@@ -93,13 +97,13 @@ export function Dashboard() {
         previousWeek: {
           ...previousWeek,
           users: Array.isArray(previousWeek.users) ? previousWeek.users : [],
-          entries: Array.isArray(previousWeek.entries) ? previousWeek.entries : [],
+          entries: Array.isArray(previousWeek.entries) ? previousWeek.entries.filter((entry) => entry.type === 'actual') : [],
           projects: Array.isArray(previousWeek.projects) ? previousWeek.projects : [],
         },
         weekBeforePrevious: {
           ...weekBeforePrevious,
           users: Array.isArray(weekBeforePrevious.users) ? weekBeforePrevious.users : [],
-          entries: Array.isArray(weekBeforePrevious.entries) ? weekBeforePrevious.entries : [],
+          entries: Array.isArray(weekBeforePrevious.entries) ? weekBeforePrevious.entries.filter((entry) => entry.type === 'actual') : [],
           projects: Array.isArray(weekBeforePrevious.projects) ? weekBeforePrevious.projects : [],
         },
         selectedUserId,
@@ -113,7 +117,7 @@ export function Dashboard() {
       previousWeek: {
         ...previousWeek,
         users: Array.isArray(previousWeek.users) ? previousWeek.users : [],
-        entries: Array.isArray(previousWeek.entries) ? previousWeek.entries : [],
+        entries: Array.isArray(previousWeek.entries) ? previousWeek.entries.filter((entry) => entry.type === 'actual') : [],
         projects: Array.isArray(previousWeek.projects) ? previousWeek.projects : [],
       },
       selectedUserId,
@@ -135,8 +139,8 @@ export function Dashboard() {
     return (
       <section className="space-y-6 px-4 md:px-0">
         <div className="h-24 animate-pulse rounded-2xl bg-white shadow-sm" />
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, index) => (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
+          {Array.from({ length: 3 }).map((_, index) => (
             <div className="h-32 animate-pulse rounded-2xl bg-white shadow-sm" key={index} />
           ))}
         </div>

@@ -1,7 +1,6 @@
 import type {
   DashboardResponse,
   DashboardWeekResponse,
-  EntryType,
   GreetingResponse,
   Project,
   User,
@@ -105,7 +104,7 @@ export function getDashboardWeek(weekStart: string): Promise<DashboardWeekRespon
 interface UpsertEntryInput {
   userId: string;
   weekStart: string;
-  type: EntryType;
+  type: "actual";
   allocations: Record<string, number>;
   hours?: Record<string, number>;
   inputMode?: "slider" | "hours";
