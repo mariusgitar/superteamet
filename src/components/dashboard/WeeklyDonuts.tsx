@@ -3,16 +3,17 @@ import type { DonutCardData } from '../../lib/dashboard';
 
 interface WeeklyDonutsProps {
   cards: DonutCardData[];
+  layout?: 'scroll' | 'comparison';
 }
 
-export function WeeklyDonuts({ cards }: WeeklyDonutsProps) {
+export function WeeklyDonuts({ cards, layout = 'scroll' }: WeeklyDonutsProps) {
   const safeCards = Array.isArray(cards) ? cards : [];
 
   return (
-    <div className="overflow-x-auto pb-2">
-      <div className="flex min-w-max gap-4">
+    <div className={layout === 'scroll' ? 'overflow-x-auto pb-2' : ''}>
+      <div className={layout === 'scroll' ? 'flex min-w-max gap-4' : 'grid grid-cols-1 gap-4 sm:grid-cols-2'}>
         {safeCards.map((card) => (
-          <article className="w-40 min-w-40 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-48 md:min-w-48" key={card.user.id}>
+          <article className={layout === 'scroll' ? 'w-40 min-w-40 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:w-48 md:min-w-48' : 'w-full rounded-2xl border border-slate-200 bg-white p-4'} key={card.user.id}>
             <div className="relative h-40 w-full">
               {card.badge ? (
                 <span className="absolute right-2 top-2 z-10 rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">

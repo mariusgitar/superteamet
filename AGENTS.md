@@ -141,6 +141,7 @@ Protected write routes require header `x-api-secret: <API_SECRET>` — set this 
 | GET    | `/api/entries?userId=&weekStart=` | Get plan+actual for a user+week                         |
 | POST   | `/api/entries`                    | Upsert entry `{ userId, weekStart, type, allocations }` |
 | GET    | `/api/greeting?name=`             | Generate a short AI greeting for the current user       |
+| GET    | `/api/dashboard/projects?months=` | Aggregate hour-mode project data by month and user      |
 
 ---
 

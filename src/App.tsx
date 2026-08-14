@@ -244,7 +244,7 @@ export default function App() {
             >
               ← Tilbake
             </button>
-            <Dashboard />
+            <Dashboard currentUser={user} />
           </>
         ) : null}
       </div>
