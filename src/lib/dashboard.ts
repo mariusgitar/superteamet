@@ -1,5 +1,5 @@
 import type { AllocationMap, DashboardResponse, DashboardWeekResponse, Project, User, WeekEntry } from '../types';
-import { accuracyScore, formatWeekLabel, weekNumber, weekStart as getWeekStart } from './utils';
+import { weekNumber, weekStart as getWeekStart } from './utils';
 
 const FULL_WEEK_HOURS = 37.5;
 const DONUT_PROJECT_LIMIT = 5;
@@ -53,12 +53,6 @@ export interface TopProjectBar {
   percentage: number;
 }
 
-export interface AccuracyHistoryRow {
-  weekStart: string;
-  weekLabel: string;
-  [userId: string]: number | string | null;
-}
-
 export function getPreviousWeekStart(weekStart: string): string {
   const cursor = new Date(`${weekStart}T12:00:00`);
   if (Number.isNaN(cursor.getTime())) {
@@ -73,10 +67,8 @@ export function calculateDashboardMetrics(params: {
   previousWeek: DashboardWeekResponse;
   weekBeforePrevious: DashboardWeekResponse;
   selectedUserId: string | null;
-  streakEntries: WeekEntry[];
-  streakUsers: User[];
 }): DashboardMetric[] {
-  const { currentWeek, previousWeek, weekBeforePrevious, selectedUserId, streakEntries, streakUsers } = params;
+  const { currentWeek, previousWeek, weekBeforePrevious, selectedUserId } = params;
   const currentUsers = selectedUserId
     ? currentWeek.users.filter((user) => user.id === selectedUserId)
     : currentWeek.users;
@@ -94,13 +86,10 @@ export function calculateDashboardMetrics(params: {
   const currentHasActual = currentScope.some((entry) => entry.type === 'actual');
   const previousHours = summarizeHours(previousScope);
   const weekBeforeHours = summarizeHours(weekBeforeScope);
-  const previousAccuracy = summarizeAccuracy(previousScope);
-  const weekBeforeAccuracy = summarizeAccuracy(weekBeforeScope);
   const previousProjects = summarizeActiveProjects(previousScope);
   const weekBeforeProjects = summarizeActiveProjects(weekBeforeScope);
   const previousUnregistered = summarizeUnregistered(previousScope);
   const weekBeforeUnregistered = summarizeUnregistered(weekBeforeScope);
-  const streak = calculateTeamSubmissionStreak(streakEntries, streakUsers);
   const currentPlanSummary = summarizePlanHours(currentScope, currentUsers.length);
 
   return [
@@ -117,22 +106,10 @@ export function calculateDashboardMetrics(params: {
       deltaTone: currentHasActual ? getDeltaTone(previousProjects, weekBeforeProjects, 'higher-is-better') : 'neutral',
     },
     {
-      label: 'Treffscore forrige uke',
-      value: previousAccuracy === null ? '—' : `${previousAccuracy}%`,
-      delta: formatDelta({ current: previousAccuracy, previous: weekBeforeAccuracy, unit: 'percent' }),
-      deltaTone: getDeltaTone(previousAccuracy, weekBeforeAccuracy, 'higher-is-better'),
-    },
-    {
       label: 'Uregistrert tid',
       value: previousUnregistered === null ? '—' : formatHours(previousUnregistered),
       delta: formatDelta({ current: previousUnregistered, previous: weekBeforeUnregistered, unit: 'hours', invertTone: true }),
       deltaTone: getDeltaTone(previousUnregistered, weekBeforeUnregistered, 'lower-is-better'),
-    },
-    {
-      label: 'Team streak',
-      value: `🔥 ${streak}`,
-      delta: 'Alle leverte faktisk ukeinnsikt',
-      deltaTone: 'neutral',
     },
     {
       label: 'Planlagte timer denne uka',
@@ -351,33 +328,6 @@ export function buildTopProjectBars(entries: WeekEntry[], projects: Project[], s
   }));
 }
 
-export function buildAccuracyHistory(response: DashboardResponse, users: User[], selectedUserId: string | null): AccuracyHistoryRow[] {
-  const safeUsers = users ?? [];
-  const safeWeeks = response.weeks ?? [];
-  const safeEntries = response.entries ?? [];
-  const scopedUsers = selectedUserId ? safeUsers.filter((user) => user.id === selectedUserId) : safeUsers;
-
-  return safeWeeks
-    .map((week) => {
-      const row: AccuracyHistoryRow = {
-        weekStart: week,
-        weekLabel: formatWeekLabel(week),
-      };
-      let count = 0;
-
-      for (const user of scopedUsers) {
-        const plan = safeEntries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'plan');
-        const actual = safeEntries.find((entry) => entry.weekStart === week && entry.userId === user.id && entry.type === 'actual');
-        const value = plan && actual ? accuracyScore(plan.allocations, actual.allocations) : null;
-        row[user.id] = value;
-        if (value !== null) count += 1;
-      }
-
-      return count > 0 ? row : null;
-    })
-    .filter((row): row is AccuracyHistoryRow => row !== null);
-}
-
 function filterEntriesByUsers(entries: WeekEntry[], users: User[]): WeekEntry[] {
   const userIds = new Set((users ?? []).map((user) => user.id));
   return (entries ?? []).filter((entry) => userIds.has(entry.userId));
@@ -400,23 +350,6 @@ function summarizeActiveProjects(entries: WeekEntry[]): number {
   return projectIds.size;
 }
 
-function summarizeAccuracy(entries: WeekEntry[]): number | null {
-  const grouped = new Map<string, { plan?: WeekEntry; actual?: WeekEntry }>();
-  for (const entry of entries) {
-    const current = grouped.get(entry.userId) ?? {};
-    if (entry.type === 'plan') current.plan = entry;
-    if (entry.type === 'actual') current.actual = entry;
-    grouped.set(entry.userId, current);
-  }
-
-  const values = [...grouped.values()]
-    .map((group) => (group.plan && group.actual ? accuracyScore(group.plan.allocations, group.actual.allocations) : null))
-    .filter((value): value is number => value !== null);
-
-  if (values.length === 0) return null;
-  return Math.round(values.reduce((sum, value) => sum + value, 0) / values.length);
-}
-
 function summarizeUnregistered(entries: WeekEntry[]): number | null {
   const hourEntries = entries.filter((entry) => entry.type === 'actual' && entry.inputMode === 'hours' && typeof entry.totalHours === 'number');
   if (hourEntries.length === 0) return null;
@@ -424,38 +357,7 @@ function summarizeUnregistered(entries: WeekEntry[]): number | null {
   return Math.max(0, FULL_WEEK_HOURS - totalRegistered / hourEntries.length);
 }
 
-function calculateTeamSubmissionStreak(entries: WeekEntry[], users: User[]): number {
-  const teamSize = users.length;
-  if (teamSize === 0) return 0;
-
-  const byWeek = new Map<string, Set<string>>();
-  for (const entry of entries) {
-    if (entry.type !== 'actual') continue;
-    const current = byWeek.get(entry.weekStart) ?? new Set<string>();
-    current.add(entry.userId);
-    byWeek.set(entry.weekStart, current);
-  }
-
-  const fullWeeks = [...byWeek.entries()]
-    .filter(([, userIds]) => userIds.size === teamSize)
-    .map(([week]) => week)
-    .sort((a, b) => String(b).localeCompare(String(a)));
-
-  if (fullWeeks.length === 0) return 0;
-
-  let streak = 0;
-  let cursor = fullWeeks[0];
-  const fullWeekSet = new Set(fullWeeks);
-
-  while (fullWeekSet.has(cursor)) {
-    streak += 1;
-    cursor = getPreviousWeekStart(cursor);
-  }
-
-  return streak;
-}
-
-function formatDelta(params: { current: number | null; previous: number | null; unit: 'hours' | 'percent' | 'count'; invertTone?: boolean }): string {
+function formatDelta(params: { current: number | null; previous: number | null; unit: 'hours' | 'count'; invertTone?: boolean }): string {
   const { current, previous, unit, invertTone = false } = params;
   if (current === null || previous === null) {
     return '—';
@@ -469,11 +371,7 @@ function formatDelta(params: { current: number | null; previous: number | null; 
   const improved = invertTone ? diff < 0 : diff > 0;
   const arrow = improved ? '↑' : '↓';
   const absValue = Math.abs(diff);
-  const formattedValue = unit === 'percent'
-    ? `${Math.round(absValue)}%`
-    : unit === 'hours'
-      ? formatHours(absValue)
-      : `${Math.round(absValue)}`;
+  const formattedValue = unit === 'hours' ? formatHours(absValue) : `${Math.round(absValue)}`;
 
   return `${arrow} ${formattedValue} fra forrige uke`;
 }

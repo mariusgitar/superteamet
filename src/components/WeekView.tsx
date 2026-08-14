@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatWeekLabel, weekStart } from '../lib/utils';
+import { formatWeekLabel, weekNumber, weekStart } from '../lib/utils';
 import type { EntryType, User, WeekEntriesResponse } from '../types';
 import { getWeekEntries } from '../lib/api';
-import { AccuracyCard } from './AccuracyCard';
 import { EntryForm } from './EntryForm';
 
 interface WeekViewProps {
   user: User;
   currentWeekStart: string;
-  onStreakMilestone?: (streak: number) => void;
 }
 
 interface ActionButtonProps {
@@ -36,7 +34,7 @@ function ActionButton({ title, subtitle, onClick, submitted = false }: ActionBut
   );
 }
 
-export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekViewProps) {
+export function WeekView({ user, currentWeekStart }: WeekViewProps) {
   const [entries, setEntries] = useState<WeekEntriesResponse>({ plan: null, actual: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +121,6 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
           userId={user.id}
           weekStart={currentWeekStart}
           onSubmitted={handleSubmitted}
-          onStreakMilestone={onStreakMilestone}
         />
       </div>
     );
@@ -131,23 +128,20 @@ export function WeekView({ user, currentWeekStart, onStreakMilestone }: WeekView
 
   if (entries.plan && entries.actual) {
     return (
-      <div className="space-y-3">
-        <AccuracyCard
-          actual={entries.actual}
-          currentWeekStart={currentWeekStart}
-          plan={entries.plan}
-          userId={user.id}
-        />
-        <div className="text-center text-sm text-slate-600">
-          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('plan')} type="button">
+      <section className="rounded-3xl border border-emerald-200 bg-white/85 p-6 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
+        <h2 className="text-xl font-semibold text-slate-900">✓ Ukas arbeid registrert</h2>
+        <p className="mt-4 text-slate-600">
+          Du har registrert både plan og faktisk arbeid for uke {weekNumber(currentWeekStart)}.
+        </p>
+        <div className="mt-6 flex flex-wrap gap-3">
+          <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700" onClick={() => setActiveForm('plan')} type="button">
             Juster ukesplan
           </button>
-          <span className="mx-2 text-slate-400">·</span>
-          <button className="underline-offset-2 hover:text-slate-900 hover:underline" onClick={() => setActiveForm('actual')} type="button">
-            Juster ukas arbeid
+          <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700" onClick={() => setActiveForm('actual')} type="button">
+            Juster arbeid
           </button>
         </div>
-      </div>
+      </section>
     );
   }
 

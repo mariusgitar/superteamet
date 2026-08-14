@@ -10,12 +10,6 @@ import { weekNumber, weekStart } from "./lib/utils";
 
 type AppView = "week" | "dashboard" | "admin";
 
-interface ToastState {
-  id: number;
-  message: string;
-  visible: boolean;
-}
-
 const GREETING_STORAGE_KEY = "ukespeil_greeting";
 
 interface GreetingCache {
@@ -28,7 +22,6 @@ export default function App() {
   const [currentWeekStart, setCurrentWeekStart] = useState(weekStart());
   const [view, setView] = useState<AppView>("week");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
   const [greeting, setGreeting] = useState<string | null>(null);
   const [greetingVisible, setGreetingVisible] = useState(false);
 
@@ -124,25 +117,6 @@ export default function App() {
     return <UserSelect onSelect={saveUser} />;
   }
 
-  const showStreakMilestone = (streak: number) => {
-    const id = Date.now();
-    setToast({
-      id,
-      message: `🔥 ${streak} uker på rad! Imponerende.`,
-      visible: true,
-    });
-
-    window.setTimeout(() => {
-      setToast((current) =>
-        current?.id === id ? { ...current, visible: false } : current,
-      );
-    }, 2600);
-
-    window.setTimeout(() => {
-      setToast((current) => (current?.id === id ? null : current));
-    }, 3000);
-  };
-
   const switchView = (nextView: AppView) => {
     setView(nextView);
     setMobileMenuOpen(false);
@@ -160,17 +134,6 @@ export default function App() {
 
   return (
     <main className="min-h-screen px-4 py-8 text-slate-900">
-      {toast ? (
-        <div
-          className={`fixed left-1/2 top-4 z-50 -translate-x-1/2 rounded-xl bg-slate-900/95 px-4 py-2 text-sm font-medium text-white shadow-xl ring-1 ring-white/20 transition-opacity duration-300 ${
-            toast.visible ? "opacity-100" : "opacity-0"
-          }`}
-          role="status"
-        >
-          {toast.message}
-        </div>
-      ) : null}
-
       <div className="mx-auto max-w-5xl animate-fade-up">
         <header className="relative z-40 mb-5 rounded-3xl border border-white/60 bg-white/70 p-5 shadow-[0_18px_50px_-32px_rgba(79,70,229,0.45)] backdrop-blur">
           <h1 className="text-3xl font-semibold tracking-tight">Ukespeil</h1>
@@ -255,11 +218,7 @@ export default function App() {
               currentWeekStart={currentWeekStart}
               onChangeWeek={setCurrentWeekStart}
             />
-            <WeekView
-              currentWeekStart={currentWeekStart}
-              onStreakMilestone={showStreakMilestone}
-              user={user}
-            />
+            <WeekView currentWeekStart={currentWeekStart} user={user} />
           </>
         ) : null}
 
