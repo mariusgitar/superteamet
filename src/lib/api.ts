@@ -1,5 +1,6 @@
 import type {
   DashboardResponse,
+  DashboardProjectsResponse,
   DashboardWeekResponse,
   GreetingResponse,
   Project,
@@ -99,6 +100,11 @@ export function getDashboard(weeks: number): Promise<DashboardResponse> {
 export function getDashboardWeek(weekStart: string): Promise<DashboardWeekResponse> {
   const query = new URLSearchParams({ weekStart }).toString();
   return request<DashboardWeekResponse>(`/api/dashboard/week?${query}`);
+}
+
+export function getDashboardProjects(months?: number): Promise<DashboardProjectsResponse> {
+  const query = months ? `?${new URLSearchParams({ months: String(months) })}` : '';
+  return request<DashboardProjectsResponse>(`/api/dashboard/projects${query}`);
 }
 
 interface UpsertEntryInput {

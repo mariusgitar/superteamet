@@ -40,6 +40,19 @@ export interface DashboardWeekResponse {
   entries: WeekEntry[];
 }
 
+export interface DashboardProjectMonth {
+  month: string;
+  projectId: string;
+  userId: string;
+  totalHours: number;
+  totalPercent: number;
+}
+
+export interface DashboardProjectsResponse {
+  projects: Project[];
+  monthly: DashboardProjectMonth[];
+}
+
 export interface GreetingResponse {
   greeting: string;
 }

@@ -118,7 +118,7 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
   const weekEntries = Array.isArray(week.entries) ? week.entries : [];
   const weekProjects = Array.isArray(week.projects) ? week.projects : [];
   const users = selectedUserId ? weekUsers.filter((user) => user.id === selectedUserId) : weekUsers;
-  const emptyMessage = 'Ingen registreringer denne uka.';
+  const emptyMessage = 'Ikke registrert denne uka';
 
   return users.map((user) => {
     const entry = weekEntries.find((weekEntry) => weekEntry.userId === user.id && weekEntry.type === 'actual');
