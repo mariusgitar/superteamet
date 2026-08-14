@@ -90,7 +90,6 @@ export function calculateDashboardMetrics(params: {
   const weekBeforeProjects = summarizeActiveProjects(weekBeforeScope);
   const previousUnregistered = summarizeUnregistered(previousScope);
   const weekBeforeUnregistered = summarizeUnregistered(weekBeforeScope);
-  const currentPlanSummary = summarizePlanHours(currentScope, currentUsers.length);
 
   return [
     {
@@ -111,36 +110,25 @@ export function calculateDashboardMetrics(params: {
       delta: formatDelta({ current: previousUnregistered, previous: weekBeforeUnregistered, unit: 'hours', invertTone: true }),
       deltaTone: getDeltaTone(previousUnregistered, weekBeforeUnregistered, 'lower-is-better'),
     },
-    {
-      label: 'Planlagte timer denne uka',
-      value: currentPlanSummary.totalHours === null ? '—' : formatHours(currentPlanSummary.totalHours),
-      sublabel: currentPlanSummary.totalHours === null
-        ? 'Ingen har lagt inn ukesplan ennå'
-        : `${currentPlanSummary.plannedUsers} av ${currentPlanSummary.teamSize} teammedlemmer har planlagt`,
-      delta: '—',
-      deltaTone: 'neutral',
-    },
   ];
 }
 
-export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: string | null, options?: { entryType?: 'plan' | 'actual'; badge?: string; emptyMessage?: string }): DonutCardData[] {
+export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: string | null): DonutCardData[] {
   const weekUsers = Array.isArray(week.users) ? week.users : [];
   const weekEntries = Array.isArray(week.entries) ? week.entries : [];
   const weekProjects = Array.isArray(week.projects) ? week.projects : [];
   const users = selectedUserId ? weekUsers.filter((user) => user.id === selectedUserId) : weekUsers;
-  const entryType = options?.entryType ?? 'actual';
-  const emptyMessage = options?.emptyMessage ?? 'Ingen registreringer denne uka.';
+  const emptyMessage = 'Ingen registreringer denne uka.';
 
   return users.map((user) => {
-    const entry = weekEntries.find((weekEntry) => weekEntry.userId === user.id && weekEntry.type === entryType);
-    const source = entryType === 'actual' ? entry?.hours : entry?.allocations;
+    const entry = weekEntries.find((weekEntry) => weekEntry.userId === user.id && weekEntry.type === 'actual');
+    const source = entry?.hours;
 
     if (!entry || !source) {
       return {
         user,
         totalHours: null,
         hasData: false,
-        badge: options?.badge,
         emptyMessage,
         slices: [{ id: 'empty', name: 'Ingen data', color: '#e2e8f0', value: 1 }],
         legendItems: [],
@@ -153,7 +141,7 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
         id: projectId,
         name: weekProjects.find((project) => project.id === projectId)?.name ?? 'Ukjent prosjekt',
         color: weekProjects.find((project) => project.id === projectId)?.color ?? '#94a3b8',
-        value: entryType === 'actual' ? value : percentToHours(value),
+        value,
       }))
       .sort((a, b) => b.value - a.value);
 
@@ -162,7 +150,6 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
         user,
         totalHours: 0,
         hasData: false,
-        badge: options?.badge,
         emptyMessage,
         slices: [{ id: 'empty', name: 'Ingen data', color: '#e2e8f0', value: 1 }],
         legendItems: [],
@@ -177,9 +164,8 @@ export function buildDonutCards(week: DashboardWeekResponse, selectedUserId: str
 
     return {
       user,
-      totalHours: entryType === 'actual' ? (entry.totalHours ?? sumAllocation(source)) : allocationPercentToHours(source),
+      totalHours: entry.totalHours ?? sumAllocation(source),
       hasData: true,
-      badge: options?.badge,
       emptyMessage,
       slices,
       legendItems: slices.slice(0, LEGEND_PROJECT_LIMIT),
@@ -197,7 +183,6 @@ export function buildCurrentWeekSection(params: {
   const currentWeekStart = currentEntries[0]?.weekStart ?? '';
   const previousWeekStart = (previousWeek.entries ?? [])[0]?.weekStart ?? '';
   const hasThisWeekActual = currentEntries.some((entry) => entry.type === 'actual');
-  const hasThisWeekPlan = currentEntries.some((entry) => entry.type === 'plan');
   const hasPrevWeekActual = (previousWeek.entries ?? []).some((entry) => entry.type === 'actual');
 
   if (hasThisWeekActual) {
@@ -211,23 +196,6 @@ export function buildCurrentWeekSection(params: {
         projects: currentWeek.projects ?? [],
         users: currentWeek.users ?? [],
         selectedUserId,
-        entryType: 'actual',
-      }),
-    };
-  }
-
-  if (hasThisWeekPlan) {
-    return {
-      title: `Ukesplan (${formatWeekShortLabel(currentEntries.find((entry) => entry.type === 'plan')?.weekStart ?? '')})`,
-      tableTitle: 'Team sammenligning denne uka',
-      emptyMessage: 'Ingen registreringer ennå',
-      cards: buildDonutCards(currentWeek, selectedUserId, { entryType: 'plan', badge: 'Plan', emptyMessage: 'Ingen har lagt inn ukesplan ennå.' }),
-      rows: buildComparisonRows({
-        entries: currentWeek.entries ?? [],
-        projects: currentWeek.projects ?? [],
-        users: currentWeek.users ?? [],
-        selectedUserId,
-        entryType: 'plan',
       }),
     };
   }
@@ -243,7 +211,6 @@ export function buildCurrentWeekSection(params: {
         projects: previousWeek.projects ?? [],
         users: previousWeek.users ?? [],
         selectedUserId,
-        entryType: 'actual',
       }),
     };
   }
@@ -263,20 +230,17 @@ export function buildComparisonRows(params: {
   users: User[];
   selectedUserId: string | null;
   aggregateByPeriod?: boolean;
-  entryType?: 'plan' | 'actual';
 }): ComparisonRow[] {
   const users = params.selectedUserId ? (params.users ?? []).filter((user) => user.id === params.selectedUserId) : (params.users ?? []);
-  const entryType = params.entryType ?? 'actual';
-  const scopedEntries = filterEntriesByUsers(params.entries ?? [], users).filter((entry) => entry.type === entryType);
+  const scopedEntries = filterEntriesByUsers(params.entries ?? [], users).filter((entry) => entry.type === 'actual');
   const rowsByProject = new Map<string, Record<string, number>>();
 
   for (const entry of scopedEntries) {
-    const source = entryType === 'actual' ? (entry.hours ?? {}) : entry.allocations;
+    const source = entry.hours ?? {};
     for (const [projectId, value] of Object.entries(source)) {
       if (value <= 0) continue;
       const row = rowsByProject.get(projectId) ?? {};
-      const normalizedValue = entryType === 'actual' ? value : percentToHours(value);
-      row[entry.userId] = (row[entry.userId] ?? 0) + normalizedValue;
+      row[entry.userId] = (row[entry.userId] ?? 0) + value;
       rowsByProject.set(projectId, row);
     }
   }
@@ -388,29 +352,6 @@ function formatWeekShortLabel(weekStart: string): string {
   const date = new Date(`${weekStart}T12:00:00`);
   if (Number.isNaN(date.getTime())) return 'uke 0';
   return `uke ${weekNumber(weekStart)}`;
-}
-
-function summarizePlanHours(entries: WeekEntry[], teamSize: number): { totalHours: number | null; plannedUsers: number; teamSize: number } {
-  const planEntries = entries.filter((entry) => entry.type === 'plan');
-  if (planEntries.length === 0) {
-    return { totalHours: null, plannedUsers: 0, teamSize };
-  }
-
-  const totalHours = planEntries.reduce((sum, entry) => sum + allocationPercentToHours(entry.allocations), 0);
-  return {
-    totalHours: Math.round(totalHours * 10) / 10,
-    plannedUsers: planEntries.length,
-    teamSize,
-  };
-}
-
-function allocationPercentToHours(allocations: AllocationMap): number {
-  const totalPercent = Object.values(allocations).reduce((sum, value) => sum + value, 0);
-  return percentToHours(totalPercent);
-}
-
-function percentToHours(percent: number): number {
-  return (percent / 100) * FULL_WEEK_HOURS;
 }
 
 function formatHours(value: number): string {

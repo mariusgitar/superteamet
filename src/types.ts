@@ -1,5 +1,3 @@
-export type EntryType = "plan" | "actual";
-
 export interface User {
   id: string;
   name: string;
@@ -18,7 +16,7 @@ export interface WeekEntry {
   id: string;
   userId: string;
   weekStart: string;
-  type: EntryType;
+  type: string;
   allocations: AllocationMap;
   hours?: AllocationMap;
   inputMode?: "slider" | "hours";
@@ -27,7 +25,6 @@ export interface WeekEntry {
 }
 
 export interface WeekEntriesResponse {
-  plan: WeekEntry | null;
   actual: WeekEntry | null;
 }
 

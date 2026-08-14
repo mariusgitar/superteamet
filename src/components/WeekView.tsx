@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { formatWeekLabel, weekNumber, weekStart } from '../lib/utils';
-import type { EntryType, User, WeekEntriesResponse } from '../types';
+import { formatWeekLabel, weekStart } from '../lib/utils';
+import type { User, WeekEntriesResponse } from '../types';
 import { getWeekEntries } from '../lib/api';
 import { EntryForm } from './EntryForm';
 
@@ -9,36 +9,11 @@ interface WeekViewProps {
   currentWeekStart: string;
 }
 
-interface ActionButtonProps {
-  title: string;
-  subtitle: string;
-  onClick: () => void;
-  submitted?: boolean;
-}
-
-function ActionButton({ title, subtitle, onClick, submitted = false }: ActionButtonProps) {
-  return (
-    <button
-      className="flex h-full w-full flex-col items-start rounded-2xl border border-slate-200/80 bg-white/90 p-4 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:bg-indigo-50/40"
-      onClick={onClick}
-      type="button"
-    >
-      <div className="flex w-full items-center justify-between gap-2">
-        <span className="text-base font-semibold tracking-tight text-slate-900">{title}</span>
-        {submitted ? (
-          <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-xs font-medium text-emerald-700">Levert</span>
-        ) : null}
-      </div>
-      <span className="mt-2 text-sm text-slate-500">{subtitle}</span>
-    </button>
-  );
-}
-
 export function WeekView({ user, currentWeekStart }: WeekViewProps) {
-  const [entries, setEntries] = useState<WeekEntriesResponse>({ plan: null, actual: null });
+  const [entries, setEntries] = useState<WeekEntriesResponse>({ actual: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeForm, setActiveForm] = useState<EntryType | null>(null);
+  const [showConfirmation, setShowConfirmation] = useState(false);
 
   const loadEntries = async () => {
     try {
@@ -53,25 +28,20 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
   };
 
   useEffect(() => {
+    setShowConfirmation(false);
     void loadEntries();
   }, [user.id, currentWeekStart]);
 
-  useEffect(() => {
-    setActiveForm(null);
-  }, [currentWeekStart, user.id]);
-
-  const isTooFarInPastWithoutPlan = useMemo(() => {
-    if (entries.plan) return false;
-    const thisWeek = weekStart();
-    const oneWeekAgo = new Date(`${thisWeek}T12:00:00`);
+  const isTooFarInPastWithoutActual = useMemo(() => {
+    if (entries.actual) return false;
+    const oneWeekAgo = new Date(`${weekStart()}T12:00:00`);
     oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-    const oneWeekAgoStart = weekStart(oneWeekAgo);
-    return currentWeekStart < oneWeekAgoStart;
-  }, [currentWeekStart, entries.plan]);
+    return currentWeekStart < weekStart(oneWeekAgo);
+  }, [currentWeekStart, entries.actual]);
 
   const handleSubmitted = async () => {
     await loadEntries();
-    setActiveForm(null);
+    setShowConfirmation(true);
   };
 
   if (loading) {
@@ -91,7 +61,7 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
     return <p className="rounded-2xl border border-red-200 bg-red-50/70 p-4 text-sm text-red-700 shadow-sm">{error}</p>;
   }
 
-  if (isTooFarInPastWithoutPlan) {
+  if (isTooFarInPastWithoutActual) {
     return (
       <section className="rounded-3xl border border-white/80 bg-white/80 p-8 text-center shadow-[0_20px_50px_-36px_rgba(79,70,229,0.75)]">
         <div className="mx-auto mb-4 w-20 text-slate-400" aria-hidden>
@@ -102,70 +72,33 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
             <text x="60" y="82" textAnchor="middle" className="fill-slate-500 text-4xl font-semibold">?</text>
           </svg>
         </div>
-        <p className="text-lg font-medium text-slate-700">Ingen registreringer for denne uka.</p>
+        <p className="text-lg font-medium text-slate-700">Ingen registreringer for denne uka</p>
       </section>
     );
   }
 
-  if (activeForm) {
-    const isActual = activeForm === 'actual';
-
-    return (
-      <div className="space-y-3">
-        <EntryForm
-          existingEntry={entries[activeForm]}
-          existingPlan={isActual ? entries.plan : null}
-          onCancel={() => setActiveForm(null)}
-          title={isActual ? 'Registrer ukas arbeid' : 'Legg inn ukesplan'}
-          type={activeForm}
-          userId={user.id}
-          weekStart={currentWeekStart}
-          onSubmitted={handleSubmitted}
-        />
-      </div>
-    );
-  }
-
-  if (entries.plan && entries.actual) {
+  if (showConfirmation) {
     return (
       <section className="rounded-3xl border border-emerald-200 bg-white/85 p-6 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
         <h2 className="text-xl font-semibold text-slate-900">✓ Ukas arbeid registrert</h2>
-        <p className="mt-4 text-slate-600">
-          Du har registrert både plan og faktisk arbeid for uke {weekNumber(currentWeekStart)}.
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700" onClick={() => setActiveForm('plan')} type="button">
-            Juster ukesplan
-          </button>
-          <button className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700" onClick={() => setActiveForm('actual')} type="button">
-            Juster arbeid
-          </button>
-        </div>
+        <p className="mt-2 text-slate-600">{formatWeekLabel(currentWeekStart)}</p>
+        <button
+          className="mt-6 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700"
+          onClick={() => setShowConfirmation(false)}
+          type="button"
+        >
+          Juster registrering
+        </button>
       </section>
     );
   }
 
   return (
-    <section className="space-y-4 rounded-3xl border border-white/80 bg-white/80 p-5 shadow-[0_20px_50px_-36px_rgba(79,70,229,0.75)]">
-      {entries.actual && !entries.plan ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-          Arbeid registrert for {formatWeekLabel(currentWeekStart)} ✓
-        </p>
-      ) : null}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <ActionButton
-          onClick={() => setActiveForm('plan')}
-          submitted={Boolean(entries.plan)}
-          subtitle="Hva ønsker du å prioritere denne uka?"
-          title={entries.plan ? '✏️ Juster ukesplan' : '📅 Legg inn ukesplan'}
-        />
-        <ActionButton
-          onClick={() => setActiveForm('actual')}
-          submitted={Boolean(entries.actual)}
-          subtitle="Hvordan ble uka i praksis?"
-          title={entries.actual ? '✏️ Juster ukas arbeid' : '✅ Registrer ukas arbeid'}
-        />
-      </div>
-    </section>
+    <EntryForm
+      existingEntry={entries.actual}
+      onSubmitted={handleSubmitted}
+      userId={user.id}
+      weekStart={currentWeekStart}
+    />
   );
 }

@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { createProject } from '../lib/api';
-import type { EntryType, Project } from '../types';
+import type { Project } from '../types';
 import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
 
 const FULL_WEEK_HOURS = 37.5;
@@ -11,15 +11,12 @@ interface HoursInputProps {
   projects: Project[];
   selectedProjectIds: string[];
   submitting: boolean;
-  type: EntryType;
-  canSubmitAsPlanned: boolean;
+  editMode: boolean;
   onAddProject: (projectId: string) => void;
-  onBack: () => void;
   onHoursChange: (projectId: string, value: number) => void;
   onProjectCreated: (project: Project) => void;
   onRemoveProject: (projectId: string) => void;
   onSubmit: () => void;
-  onSubmitAsPlanned: () => void;
 }
 
 function formatHours(value: number): string {
@@ -49,15 +46,12 @@ export function HoursInput({
   projects,
   selectedProjectIds,
   submitting,
-  type,
-  canSubmitAsPlanned,
+  editMode,
   onAddProject,
-  onBack,
   onHoursChange,
   onProjectCreated,
   onRemoveProject,
   onSubmit,
-  onSubmitAsPlanned,
 }: HoursInputProps) {
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [draftValue, setDraftValue] = useState('');
@@ -107,17 +101,6 @@ export function HoursInput({
 
   return (
     <section className="space-y-4">
-      {canSubmitAsPlanned ? (
-        <button
-          className="w-full rounded-xl border border-indigo-300 bg-indigo-50/40 px-4 py-2.5 font-medium text-indigo-700 transition hover:bg-indigo-50 disabled:opacity-40"
-          disabled={submitting}
-          onClick={onSubmitAsPlanned}
-          type="button"
-        >
-          Lever som planlagt
-        </button>
-      ) : null}
-
       <div className="space-y-3">
         {selectedProjectIds.map((projectId) => {
           const project = projectById.get(projectId);
@@ -289,20 +272,12 @@ export function HoursInput({
       </div>
 
       <button
-        className="inline-flex items-center text-sm font-medium text-slate-600 transition hover:text-slate-900"
-        onClick={onBack}
-        type="button"
-      >
-        ← Tilbake
-      </button>
-
-      <button
         className="w-full rounded-xl bg-slate-900 px-4 py-2.5 font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:opacity-40"
         disabled={submitting || !canSubmit}
         onClick={onSubmit}
         type="button"
       >
-        {submitting ? 'Sender...' : type === 'plan' ? 'Lagre plan' : 'Lagre ukas arbeid'}
+        {submitting ? 'Sender...' : editMode ? 'Lagre endringer' : 'Lagre ukas arbeid'}
       </button>
 
       {showAddModal ? (

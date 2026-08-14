@@ -1,22 +1,15 @@
 import { useMemo, useState } from 'react';
 import { createProject } from '../lib/api';
-import type { EntryType, Project } from '../types';
+import type { Project } from '../types';
 import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
 
 interface ProjectPickerProps {
   projects: Project[];
   defaultProjectIds: string[];
   selectedProjectIds: string[];
-  type: EntryType;
   onToggleProject: (projectId: string) => void;
   onContinue: () => void;
   onProjectCreated: (project: Project) => void;
-}
-
-function titleForType(type: EntryType): string {
-  return type === 'plan'
-    ? 'Hvilke prosjekter planlegger du å bruke tid på?'
-    : 'Hvilke prosjekter brukte du mest tid på?';
 }
 
 function hexToRgba(hex: string, alpha: number): string {
@@ -37,7 +30,6 @@ export function ProjectPicker({
   projects,
   defaultProjectIds,
   selectedProjectIds,
-  type,
   onToggleProject,
   onContinue,
   onProjectCreated,
@@ -74,7 +66,7 @@ export function ProjectPicker({
   return (
     <section className="space-y-4">
       <div className="space-y-1">
-        <h3 className="text-lg font-semibold tracking-tight text-slate-900">{titleForType(type)}</h3>
+        <h3 className="text-lg font-semibold tracking-tight text-slate-900">Hvilke prosjekter brukte du mest tid på?</h3>
         <p className="text-sm text-slate-500">Velg ett eller flere prosjekter for å fortsette.</p>
       </div>
 
