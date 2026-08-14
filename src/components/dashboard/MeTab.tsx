@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { DashboardResponse, Project, User, WeekEntry } from '../../types';
-import type { DonutCardData } from '../../lib/dashboard';
+import { safeDate, type DonutCardData } from '../../lib/dashboard';
 import { WeeklyDonuts } from './WeeklyDonuts';
 import { Toggle, type Measurement } from './ProjectsTab';
 
@@ -12,12 +12,16 @@ interface MeTabProps { entries: WeekEntry[]; team: DashboardResponse; users: Use
 export function MeTab({ entries, team, users, currentUser }: MeTabProps) {
   const [period, setPeriod] = useState<PersonalPeriod>(12);
   const [measurement, setMeasurement] = useState<Measurement>('hours');
-  const filteredMine = filterPeriod(entries, period);
-  const filteredTeam = filterPeriod(team.entries, period);
-  const donuts = useMemo(() => buildAllocationDonuts(filteredMine, filteredTeam, team.projects, users, currentUser), [filteredMine, filteredTeam, team.projects, users, currentUser]);
+  const safeEntries = entries ?? [];
+  const teamEntries = team.entries ?? [];
+  const projects = team.projects ?? [];
+  const safeUsers = users ?? [];
+  const filteredMine = filterPeriod(safeEntries, period);
+  const filteredTeam = filterPeriod(teamEntries, period);
+  const donuts = useMemo(() => buildAllocationDonuts(filteredMine, filteredTeam, projects, safeUsers, currentUser), [filteredMine, filteredTeam, projects, safeUsers, currentUser]);
   const topProjectIds = topProjects(filteredMine).slice(0, 5);
-  const trend = buildTrend(filteredMine, team.projects, topProjectIds, measurement, period === 4);
-  const lastTwelve = [...entries].filter(isHoursEntry).sort((a, b) => a.weekStart.localeCompare(b.weekStart)).slice(-12);
+  const trend = buildTrend(filteredMine, projects, topProjectIds, measurement, period === 4);
+  const lastTwelve = [...safeEntries].filter(isHoursEntry).filter((entry) => safeDate(entry.weekStart)).sort((a, b) => a.weekStart.localeCompare(b.weekStart)).slice(-12);
 
   return <div className="space-y-6">
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -27,14 +31,14 @@ export function MeTab({ entries, team, users, currentUser }: MeTabProps) {
 
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"><h2 className="text-lg font-semibold">Mine prosjekter over tid</h2><Toggle value={measurement} onChange={setMeasurement} /></div>
-      {trend.length ? <div className="mt-4 h-80"><ResponsiveContainer><LineChart data={trend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis unit={measurement === 'hours' ? 't' : '%'} /><Tooltip /><Legend />{topProjectIds.map((id, index) => <Line dataKey={id} key={id} name={team.projects.find((project) => project.id === id)?.name ?? 'Prosjekt'} stroke={COLORS[index]} strokeWidth={2} />)}</LineChart></ResponsiveContainer></div> : <Empty />}
+      {trend.length ? <div className="mt-4 h-80"><ResponsiveContainer><LineChart data={trend}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="label" /><YAxis unit={measurement === 'hours' ? 't' : '%'} /><Tooltip /><Legend />{topProjectIds.map((id, index) => <Line dataKey={id} key={id} name={projects.find((project) => project.id === id)?.name ?? 'Prosjekt'} stroke={COLORS[index]} strokeWidth={2} />)}</LineChart></ResponsiveContainer></div> : <Empty />}
     </section>
 
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <h2 className="text-lg font-semibold">Min uregistrerte tid over tid</h2>
-      {lastTwelve.length ? <div className="mt-4 h-80 overflow-x-auto"><div className="h-full min-w-[620px]"><ResponsiveContainer><BarChart data={lastTwelve.map((entry) => ({ ...entry.hours, week: weekLabel(entry.weekStart), unregistered: Math.max(0, 37.5 - total(entry)) }))}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="week" /><YAxis domain={[0, 40]} unit="t" /><Tooltip /><Legend />{topProjects(lastTwelve).map((id, index) => <Bar dataKey={id} stackId="time" name={team.projects.find((project) => project.id === id)?.name ?? 'Prosjekt'} fill={COLORS[index % COLORS.length]} key={id} />)}<Bar dataKey="unregistered" name="Uregistrert" stackId="time" fill="#cbd5e1" /><ReferenceLine y={37.5} stroke="#475569" strokeDasharray="4 4" /></BarChart></ResponsiveContainer></div></div> : <Empty />}
+      {lastTwelve.length ? <div className="mt-4 h-80 overflow-x-auto"><div className="h-full min-w-[620px]"><ResponsiveContainer><BarChart data={lastTwelve.map((entry) => ({ ...entry.hours, week: weekLabel(entry.weekStart), unregistered: Math.max(0, 37.5 - total(entry)) }))}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="week" /><YAxis domain={[0, 40]} unit="t" /><Tooltip /><Legend />{topProjects(lastTwelve).map((id, index) => <Bar dataKey={id} stackId="time" name={projects.find((project) => project.id === id)?.name ?? 'Prosjekt'} fill={COLORS[index % COLORS.length]} key={id} />)}<Bar dataKey="unregistered" name="Uregistrert" stackId="time" fill="#cbd5e1" /><ReferenceLine y={37.5} stroke="#475569" strokeDasharray="4 4" /></BarChart></ResponsiveContainer></div></div> : <Empty />}
     </section>
-    <TeamComparison entries={filteredMine} teamEntries={filteredTeam} projects={team.projects} users={users} currentUser={currentUser} />
+    <TeamComparison entries={filteredMine} teamEntries={filteredTeam} projects={projects} users={safeUsers} currentUser={currentUser} />
   </div>;
 }
 
@@ -48,21 +52,25 @@ function buildAllocationDonuts(mine: WeekEntry[], team: WeekEntry[], projects: P
   return [card(current.name, mine, 1), card('Teamsnitt', team, Math.max(1, users.length))];
 }
 
-function buildTrend(entries: WeekEntry[], projects: Project[], ids: string[], measurement: Measurement, weekly: boolean) { const groups = new Map<string, WeekEntry[]>(); entries.filter(isHoursEntry).forEach((entry) => { const key = weekly ? entry.weekStart : entry.weekStart.slice(0, 7); groups.set(key, [...(groups.get(key) ?? []), entry]); }); return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([key, values]) => { const point: Record<string, string | number> = { label: weekly ? weekLabel(key) : monthLabel(key) }; const sum = values.reduce((acc, entry) => acc + total(entry), 0); ids.forEach((id) => { const hours = sumProject(values, id); point[id] = measurement === 'hours' ? hours : (sum ? Math.round(hours / sum * 100) : 0); }); return point; }); }
+function buildTrend(entries: WeekEntry[], projects: Project[], ids: string[], measurement: Measurement, weekly: boolean) { const groups = new Map<string, WeekEntry[]>(); entries.filter(isHoursEntry).filter((entry) => safeDate(entry.weekStart)).forEach((entry) => { const key = weekly ? entry.weekStart : entry.weekStart.slice(0, 7); groups.set(key, [...(groups.get(key) ?? []), entry]); }); return [...groups].sort(([a], [b]) => a.localeCompare(b)).map(([key, values]) => { const point: Record<string, string | number> = { label: weekly ? weekLabel(key) : monthLabel(key) }; const sum = values.reduce((acc, entry) => acc + total(entry), 0); ids.forEach((id) => { const hours = sumProject(values, id); point[id] = measurement === 'hours' ? hours : (sum ? Math.round(hours / sum * 100) : 0); }); return point; }); }
 function filterPeriod(entries: WeekEntry[], weeks: PersonalPeriod) {
   const actual = entries.filter(isHoursEntry);
   if (weeks === 0 || actual.length === 0) return actual;
   const latest = [...actual].sort((a, b) => b.weekStart.localeCompare(a.weekStart))[0].weekStart;
-  const cutoff = new Date(`${latest}T12:00:00`);
+  const cutoff = safeDate(latest);
+  if (!cutoff) return [];
   cutoff.setDate(cutoff.getDate() - (weeks - 1) * 7);
-  return actual.filter((entry) => new Date(`${entry.weekStart}T12:00:00`) >= cutoff);
+  return actual.filter((entry) => {
+    const date = safeDate(entry.weekStart);
+    return date !== null && date >= cutoff;
+  });
 }
 function isHoursEntry(entry: WeekEntry) { return entry.type === 'actual' && entry.inputMode === 'hours' && entry.hours; }
 function topProjects(entries: WeekEntry[]) { const ids = [...new Set(entries.flatMap((entry) => Object.keys(entry.hours ?? {})))]; return ids.sort((a, b) => sumProject(entries, b) - sumProject(entries, a)); }
 function sumProject(entries: WeekEntry[], id: string) { return entries.reduce((sum, entry) => sum + (entry.hours?.[id] ?? 0), 0); }
 function total(entry: WeekEntry) { return Object.values(entry.hours ?? {}).reduce((sum, value) => sum + value, 0); }
 function formatHours(value: number) { return `${(Math.round(value * 10) / 10).toLocaleString('nb-NO')} t`; }
-function weekLabel(value: string) { return new Intl.DateTimeFormat('nb-NO', { day: '2-digit', month: 'short' }).format(new Date(`${value}T12:00:00`)); }
-function monthLabel(value: string) { return new Intl.DateTimeFormat('nb-NO', { month: 'short' }).format(new Date(`${value}-01T12:00:00`)); }
+function weekLabel(value: string) { const date = safeDate(value); return date ? date.toLocaleDateString('nb-NO', { day: '2-digit', month: 'short' }) : 'Ukjent'; }
+function monthLabel(value: string) { const date = safeDate(value.length === 7 ? `${value}-01` : value); return date ? date.toLocaleDateString('nb-NO', { month: 'short' }) : '?'; }
 function Empty() { return <p className="p-6 text-center text-sm text-slate-500">Ingen timer registrert i valgt periode.</p>; }
 const COLORS = ['#4f46e5', '#059669', '#e11d48', '#d97706', '#0891b2'];

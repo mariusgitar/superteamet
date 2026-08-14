@@ -5,6 +5,17 @@ const FULL_WEEK_HOURS = 37.5;
 const DONUT_PROJECT_LIMIT = 5;
 const LEGEND_PROJECT_LIMIT = 3;
 
+export function safeDate(value: unknown): Date | null {
+  if (!value) return null;
+  const normalized = typeof value === 'string' && value.length === 10
+    ? `${value}T12:00:00`
+    : value;
+  const date = normalized instanceof Date
+    ? new Date(normalized.getTime())
+    : new Date(normalized as string | number);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
 export interface DashboardMetric {
   label: string;
   value: string;
@@ -54,10 +65,8 @@ export interface TopProjectBar {
 }
 
 export function getPreviousWeekStart(weekStart: string): string {
-  const cursor = new Date(`${weekStart}T12:00:00`);
-  if (Number.isNaN(cursor.getTime())) {
-    return getWeekStart();
-  }
+  const cursor = safeDate(weekStart);
+  if (!cursor) return getWeekStart();
   cursor.setDate(cursor.getDate() - 7);
   return getWeekStart(cursor);
 }
@@ -349,8 +358,8 @@ function getDeltaTone(current: number | null, previous: number | null, direction
 
 function formatWeekShortLabel(weekStart: string): string {
   if (!weekStart) return 'uke 0';
-  const date = new Date(`${weekStart}T12:00:00`);
-  if (Number.isNaN(date.getTime())) return 'uke 0';
+  const date = safeDate(weekStart);
+  if (!date) return 'uke 0';
   return `uke ${weekNumber(weekStart)}`;
 }
 
