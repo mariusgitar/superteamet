@@ -12,15 +12,17 @@ interface ThisWeekTabProps {
 }
 
 export function ThisWeekTab({ current, previous, selectedUserId, users }: ThisWeekTabProps) {
-  const displayedUsers = selectedUserId ? users.filter((user) => user.id === selectedUserId) : users;
+  const safeUsers = users ?? [];
+  const currentEntries = current.entries ?? [];
+  const displayedUsers = selectedUserId ? safeUsers.filter((user) => user.id === selectedUserId) : safeUsers;
   const cards = useMemo(() => buildDonutCards({ ...current, users }, selectedUserId), [current, selectedUserId, users]);
   const rows = useMemo(() => buildComparisonRows({
-    entries: current.entries,
-    projects: current.projects,
-    users,
+    entries: currentEntries,
+    projects: current.projects ?? [],
+    users: safeUsers,
     selectedUserId,
   }), [current, selectedUserId, users]);
-  const actualUserIds = new Set(current.entries.filter((entry) => entry.type === 'actual').map((entry) => entry.userId));
+  const actualUserIds = new Set(currentEntries.filter((entry) => entry.type === 'actual').map((entry) => entry.userId));
   const currentMissing = averageMissing(current, displayedUsers);
   const previousMissing = averageMissing(previous, displayedUsers);
   const delta = currentMissing !== null && previousMissing !== null ? currentMissing - previousMissing : null;
@@ -30,7 +32,7 @@ export function ThisWeekTab({ current, previous, selectedUserId, users }: ThisWe
       <section>
         <h2 className="mb-3 text-lg font-semibold text-slate-900">Registreringsstatus</h2>
         <div className="flex flex-wrap gap-2">
-          {users.map((user) => {
+          {safeUsers.map((user) => {
             const registered = actualUserIds.has(user.id);
             return (
               <span className={`rounded-full px-3 py-1.5 text-sm font-medium ${registered ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500'}`} key={user.id}>
@@ -71,8 +73,8 @@ function Metric({ label, value }: { label: string; value: number | null }) {
 }
 
 function averageMissing(data: DashboardWeekResponse, users: User[]): number | null {
-  const ids = new Set(users.map((user) => user.id));
-  const totals = data.entries
+  const ids = new Set((users ?? []).map((user) => user.id));
+  const totals = (data.entries ?? [])
     .filter((entry) => entry.type === 'actual' && entry.inputMode === 'hours' && ids.has(entry.userId))
     .map((entry) => Object.values(entry.hours ?? {}).reduce((sum, value) => sum + value, 0));
   return totals.length === 0 ? null : totals.reduce((sum, total) => sum + Math.max(0, 37.5 - total), 0) / totals.length;
