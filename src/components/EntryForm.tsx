@@ -1,7 +1,6 @@
-import confetti from 'canvas-confetti';
 import { useEffect, useMemo, useState } from 'react';
-import { getActualHistory, getProjects, getRecentEntries, upsertEntry } from '../lib/api';
-import { calculateStreak, formatWeekLabel, sortProjects } from '../lib/utils';
+import { getActualHistory, getProjects, upsertEntry } from '../lib/api';
+import { formatWeekLabel, sortProjects } from '../lib/utils';
 import type { EntryType, Project, WeekEntry } from '../types';
 import { HoursInput } from './HoursInput';
 import { ProjectPicker } from './ProjectPicker';
@@ -16,7 +15,6 @@ interface EntryFormProps {
   existingPlan?: WeekEntry | null;
   onCancel?: () => void;
   onSubmitted?: () => void | Promise<void>;
-  onStreakMilestone?: (streak: number) => void;
 }
 
 interface InitialState {
@@ -211,7 +209,6 @@ export function EntryForm({
   existingPlan = null,
   onCancel,
   onSubmitted,
-  onStreakMilestone,
 }: EntryFormProps) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [defaultProjectIds, setDefaultProjectIds] = useState<string[]>([]);
@@ -336,16 +333,7 @@ export function EntryForm({
         hours: submissionHours,
         inputMode: submissionInputMode,
       });
-      void confetti({ particleCount: 120, spread: 70, origin: { y: 0.6 } });
-      setSuccessMessage(`${type === 'plan' ? 'Plan' : 'Faktisk tid'} lagret for uke ${formatWeekLabel(weekStart)} 🎉`);
-
-      if (type === 'actual' && onStreakMilestone) {
-        const entries = await getRecentEntries(userId, 20);
-        const streak = calculateStreak(entries, weekStart);
-        if (streak > 0 && streak % 4 === 0) {
-          onStreakMilestone(streak);
-        }
-      }
+      setSuccessMessage(`${type === 'plan' ? 'Plan' : 'Faktisk tid'} lagret for ${formatWeekLabel(weekStart)}.`);
 
       await onSubmitted?.();
     } finally {

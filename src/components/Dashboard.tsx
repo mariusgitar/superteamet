@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getDashboard, getDashboardWeek, getUsers } from '../lib/api';
 import {
-  buildAccuracyHistory,
   buildComparisonRows,
   buildCurrentWeekSection,
   buildTopProjectBars,
@@ -9,8 +8,7 @@ import {
   getPreviousWeekStart,
 } from '../lib/dashboard';
 import { weekStart } from '../lib/utils';
-import type { DashboardResponse, DashboardWeekResponse, User, WeekEntry } from '../types';
-import { AccuracyHistoryChart } from './dashboard/AccuracyHistoryChart';
+import type { DashboardResponse, DashboardWeekResponse, User } from '../types';
 import { ComparisonTable } from './dashboard/ComparisonTable';
 import { ExportButton } from './dashboard/ExportButton';
 import { HistoricalBars } from './dashboard/HistoricalBars';
@@ -45,7 +43,6 @@ export function Dashboard() {
   const [previousWeek, setPreviousWeek] = useState<DashboardWeekResponse>(EMPTY_WEEK);
   const [weekBeforePrevious, setWeekBeforePrevious] = useState<DashboardWeekResponse>(EMPTY_WEEK);
   const [periodData, setPeriodData] = useState<DashboardResponse>(EMPTY_PERIOD);
-  const [streakEntries, setStreakEntries] = useState<WeekEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,20 +52,18 @@ export function Dashboard() {
         setLoading(true);
         setError(null);
         const weekBeforePreviousStart = getPreviousWeekStart(previousWeekStart);
-        const [userList, weekData, prevWeekData, weekBeforePrevData, selectedPeriodData, streakData] = await Promise.all([
+        const [userList, weekData, prevWeekData, weekBeforePrevData, selectedPeriodData] = await Promise.all([
           getUsers(),
           getDashboardWeek(currentWeekStart),
           getDashboardWeek(previousWeekStart),
           getDashboardWeek(weekBeforePreviousStart),
           getDashboard(range === 1 ? 1 : range),
-          getDashboard(52),
         ]);
         setUsers(userList);
         setCurrentWeek(weekData);
         setPreviousWeek(prevWeekData);
         setWeekBeforePrevious(weekBeforePrevData);
         setPeriodData(selectedPeriodData);
-        setStreakEntries(Array.isArray(streakData.entries) ? streakData.entries : []);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Klarte ikke å hente dashboard-data.');
       } finally {
@@ -108,10 +103,8 @@ export function Dashboard() {
           projects: Array.isArray(weekBeforePrevious.projects) ? weekBeforePrevious.projects : [],
         },
         selectedUserId,
-        streakEntries: Array.isArray(streakEntries) ? streakEntries : [],
-        streakUsers: headerUsers,
       }),
-    [currentWeek, previousWeek, weekBeforePrevious, selectedUserId, streakEntries, headerUsers, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
+    [currentWeek, previousWeek, weekBeforePrevious, selectedUserId, safeCurrentWeekUsers, safeCurrentWeekEntries, safeCurrentWeekProjects],
   );
 
   const currentWeekSection = useMemo(
@@ -134,10 +127,6 @@ export function Dashboard() {
   const historyRows = useMemo(
     () => buildComparisonRows({ entries: safePeriodEntries, projects: safePeriodProjects, users: headerUsers, selectedUserId, aggregateByPeriod: true }),
     [safePeriodEntries, safePeriodProjects, headerUsers, selectedUserId],
-  );
-  const accuracyHistory = useMemo(
-    () => buildAccuracyHistory({ ...periodData, weeks: Array.isArray(periodData.weeks) ? periodData.weeks : [], projects: safePeriodProjects, entries: safePeriodEntries }, headerUsers, selectedUserId),
-    [periodData, headerUsers, selectedUserId, safePeriodProjects, safePeriodEntries],
   );
 
   const hasAnyData = safeCurrentWeekEntries.length > 0 || safePeriodEntries.length > 0;
@@ -216,10 +205,6 @@ export function Dashboard() {
               <h2 className="mb-4 text-lg font-semibold text-slate-900">Historisk</h2>
               <h3 className="mb-3 text-base font-semibold text-slate-900">Topp 5 prosjekter</h3>
               <HistoricalBars data={historicalBars} />
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <h3 className="mb-3 text-base font-semibold text-slate-900">Treffscore-historikk per person</h3>
-              <AccuracyHistoryChart data={accuracyHistory} users={scopedUsers} />
             </div>
             <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
               <h3 className="mb-4 text-base font-semibold text-slate-900">Sammenligningstabell</h3>

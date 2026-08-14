@@ -11,7 +11,7 @@ Read this file at the start of every session before writing any code.
 Team members log how they _planned_ to spend their week (Monday) and how they _actually_ spent it (Friday).
 The goal is portfolio visibility — not billing. Registration must take under 30 seconds.
 
-Core mechanic: plan vs. actual comparison with an accuracy score and streak gamification.
+Core mechanic: a simple plan vs. actual comparison.
 
 ---
 
@@ -26,7 +26,6 @@ Core mechanic: plan vs. actual comparison with an accuracy score and streak gami
 | DB client | `postgres` npm package (no ORM)           |
 | Charts    | Recharts                                  |
 | Deploy    | Vercel                                    |
-| Confetti  | `canvas-confetti`                         |
 
 ---
 
@@ -46,7 +45,7 @@ ukespeil/
 │   ├── types.ts               ← shared TypeScript types
 │   ├── lib/
 │   │   ├── api.ts             ← all fetch calls to /api
-│   │   ├── utils.ts           ← weekStart(), accuracyScore(), sortProjects()
+│   │   ├── utils.ts           ← weekStart(), sortProjects()
 │   │   └── constants.ts
 │   ├── hooks/
 │   │   ├── useCurrentUser.ts  ← reads/writes localStorage
@@ -62,9 +61,7 @@ ukespeil/
 │       ├── AllocationSlider.tsx
 │       ├── TotalIndicator.tsx
 │       ├── SubmitButton.tsx
-│       ├── AccuracyCard.tsx
 │       ├── Dashboard.tsx
-│       ├── StreakBadge.tsx
 │       ├── TeamWeekChart.tsx
 │       ├── ProjectTrendChart.tsx
 │       ├── InsightPanel.tsx
@@ -160,25 +157,6 @@ export function weekStart(date = new Date()): string {
   const diff = day === 0 ? -6 : 1 - day;
   d.setDate(d.getDate() + diff);
   return d.toISOString().split("T")[0];
-}
-```
-
-### accuracyScore(plan, actual)
-
-Returns 0–100. Both arguments are `Record<string, number>` (allocations objects).
-Formula: `100 - (sum of absolute differences across all projects) / 2`
-
-```ts
-export function accuracyScore(
-  plan: Record<string, number>,
-  actual: Record<string, number>,
-): number {
-  const allKeys = new Set([...Object.keys(plan), ...Object.keys(actual)]);
-  let totalDiff = 0;
-  for (const key of allKeys) {
-    totalDiff += Math.abs((plan[key] ?? 0) - (actual[key] ?? 0));
-  }
-  return Math.round(100 - totalDiff / 2);
 }
 ```
 
