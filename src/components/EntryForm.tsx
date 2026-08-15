@@ -43,6 +43,7 @@ export function EntryForm({ userId, weekStart, existingEntry = null, onSubmitted
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [hoursValues, setHoursValues] = useState<Record<string, number>>({});
   const [submitting, setSubmitting] = useState(false);
+  const [daysAbsent, setDaysAbsent] = useState(0);
 
   useEffect(() => {
     const load = async () => {
@@ -56,6 +57,7 @@ export function EntryForm({ userId, weekStart, existingEntry = null, onSubmitted
       setProjects(sortedProjects);
       setSelectedProjectIds(initialProjectIds);
       setHoursValues(Object.fromEntries(initialProjectIds.map((projectId) => [projectId, existingHours[projectId] ?? 0])));
+      setDaysAbsent(existingEntry?.daysAbsent ?? 0);
     };
     void load();
   }, [existingEntry, userId]);
@@ -71,7 +73,7 @@ export function EntryForm({ userId, weekStart, existingEntry = null, onSubmitted
 
     setSubmitting(true);
     try {
-      await upsertEntry({ userId, weekStart, type: 'actual', allocations, hours, inputMode: 'hours' });
+      await upsertEntry({ userId, weekStart, type: 'actual', allocations, hours, inputMode: 'hours', daysAbsent });
       await onSubmitted?.();
     } finally {
       setSubmitting(false);
@@ -98,10 +100,12 @@ export function EntryForm({ userId, weekStart, existingEntry = null, onSubmitted
     <section className="space-y-5 rounded-3xl border border-white/80 bg-white/85 p-6 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
       <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Registrer ukas arbeid</h2>
       <HoursInput
+        daysAbsent={daysAbsent}
         editMode={Boolean(existingEntry)}
         hours={selectedHours}
         onAddProject={handleAddProject}
         onHoursChange={(projectId, value) => setHoursValues((current) => ({ ...current, [projectId]: value }))}
+        onDaysAbsentChange={setDaysAbsent}
         onProjectCreated={handleProjectCreated}
         onRemoveProject={handleRemoveProject}
         onSubmit={() => void handleSubmit()}

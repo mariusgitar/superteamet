@@ -2,6 +2,7 @@ import type {
   DashboardResponse,
   DashboardProjectsResponse,
   DashboardWeekResponse,
+  ExportResponse,
   GreetingResponse,
   Project,
   User,
@@ -114,6 +115,12 @@ interface UpsertEntryInput {
   allocations: Record<string, number>;
   hours?: Record<string, number>;
   inputMode?: "slider" | "hours";
+  daysAbsent?: number;
+}
+
+export function getExport(from: string, to: string): Promise<ExportResponse> {
+  const query = new URLSearchParams({ from, to }).toString();
+  return request<ExportResponse>(`/api/export?${query}`);
 }
 
 export function upsertEntry(input: UpsertEntryInput): Promise<WeekEntry> {

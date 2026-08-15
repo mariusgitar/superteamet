@@ -10,6 +10,7 @@ interface EntryRow {
   hours: Record<string, number> | null;
   input_mode: 'slider' | 'hours';
   total_hours: number | null;
+  days_absent: number;
   submitted_at: string;
 }
 
@@ -59,6 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           allocations,
           hours,
           input_mode,
+          days_absent,
           CASE
             WHEN input_mode = 'hours' AND hours IS NOT NULL THEN (
               SELECT COALESCE(SUM((value)::numeric), 0)::float8
@@ -84,6 +86,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         allocations: row.allocations,
         hours: row.hours ?? undefined,
         inputMode: row.input_mode ?? 'slider',
+        daysAbsent: Number(row.days_absent ?? 0),
         totalHours: row.total_hours,
         submittedAt: row.submitted_at,
       })),

@@ -3,8 +3,8 @@ import { createProject } from '../lib/api';
 import type { Project } from '../types';
 import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
 
-const FULL_WEEK_HOURS = 37.5;
 const QUICK_HOURS = [0.5, 1, 2, 3, 4, 6, 8] as const;
+const AVAILABLE_DAYS = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5] as const;
 
 interface HoursInputProps {
   hours: Record<string, number>;
@@ -12,8 +12,10 @@ interface HoursInputProps {
   selectedProjectIds: string[];
   submitting: boolean;
   editMode: boolean;
+  daysAbsent: number;
   onAddProject: (projectId: string) => void;
   onHoursChange: (projectId: string, value: number) => void;
+  onDaysAbsentChange: (value: number) => void;
   onProjectCreated: (project: Project) => void;
   onRemoveProject: (projectId: string) => void;
   onSubmit: () => void;
@@ -47,8 +49,10 @@ export function HoursInput({
   selectedProjectIds,
   submitting,
   editMode,
+  daysAbsent,
   onAddProject,
   onHoursChange,
+  onDaysAbsentChange,
   onProjectCreated,
   onRemoveProject,
   onSubmit,
@@ -68,7 +72,9 @@ export function HoursInput({
     () => selectedProjectIds.reduce((sum, projectId) => sum + (hours[projectId] ?? 0), 0),
     [hours, selectedProjectIds],
   );
-  const remainingHours = Math.max(0, FULL_WEEK_HOURS - totalHours);
+  const availableDays = 5 - daysAbsent;
+  const availableHours = availableDays * 7.5;
+  const remainingHours = Math.max(0, availableHours - totalHours);
   const canSubmit = totalHours > 0;
 
   const openCustomInput = (projectId: string) => {
@@ -101,6 +107,15 @@ export function HoursInput({
 
   return (
     <section className="space-y-4">
+      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+        <p className="mb-3 text-sm font-semibold text-slate-800">Tilgjengelig denne uka</p>
+        <div className="flex flex-wrap gap-2">
+          {AVAILABLE_DAYS.map((days) => {
+            const selected = days === availableDays;
+            return <button className={`rounded-lg border px-2.5 py-1.5 text-sm font-medium transition ${selected ? (days === 5 ? 'border-emerald-500 bg-emerald-100 text-emerald-800' : 'border-amber-500 bg-amber-100 text-amber-800') : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`} key={days} onClick={() => onDaysAbsentChange(5 - days)} type="button">{formatHours(days)}d</button>;
+          })}
+        </div>
+      </div>
       <div className="space-y-3">
         {selectedProjectIds.map((projectId) => {
           const project = projectById.get(projectId);
@@ -266,7 +281,7 @@ export function HoursInput({
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm">
         <p className={totalHours > 0 ? 'font-medium text-emerald-700' : 'font-medium text-slate-500'}>
-          {`Registrert: ${formatHours(totalHours)}t av ~${formatHours(FULL_WEEK_HOURS)}t`}
+          {`Registrert: ${formatHours(totalHours)}t av ~${formatHours(availableHours)}t${daysAbsent > 0 ? ` tilgjengelig (${formatHours(availableDays)} dager)` : ''}`}
         </p>
         <p className="mt-1 text-slate-500">{`Ikke registrert: ~${formatHours(remainingHours)}t`}</p>
       </div>

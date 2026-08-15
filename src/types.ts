@@ -20,6 +20,7 @@ export interface WeekEntry {
   allocations: AllocationMap;
   hours?: AllocationMap;
   inputMode?: "slider" | "hours";
+  daysAbsent?: number;
   totalHours?: number | null;
   submittedAt: string;
 }
@@ -46,7 +47,22 @@ export interface DashboardProjectMonth {
   userId: string;
   totalHours: number;
   totalPercent: number;
+  daysAbsent: number;
 }
+
+export interface ExportRow {
+  weekLabel: string;
+  weekStart: string;
+  userName: string;
+  projectName: string;
+  hours: number;
+  percent: number;
+  availableHours: number;
+  unregisteredHours: number;
+  daysAbsent: number;
+}
+
+export interface ExportResponse { rows: ExportRow[]; }
 
 export interface DashboardProjectsResponse {
   projects: Project[];
