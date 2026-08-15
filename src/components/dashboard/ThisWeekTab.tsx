@@ -76,8 +76,8 @@ function averageMissing(data: DashboardWeekResponse, users: User[]): number | nu
   const ids = new Set((users ?? []).map((user) => user.id));
   const totals = (data.entries ?? [])
     .filter((entry) => entry.type === 'actual' && entry.inputMode === 'hours' && ids.has(entry.userId))
-    .map((entry) => Object.values(entry.hours ?? {}).reduce((sum, value) => sum + value, 0));
-  return totals.length === 0 ? null : totals.reduce((sum, total) => sum + Math.max(0, 37.5 - total), 0) / totals.length;
+    .map((entry) => ({ registered: Object.values(entry.hours ?? {}).reduce((sum, value) => sum + value, 0), available: (5 - (entry.daysAbsent ?? 0)) * 7.5 }));
+  return totals.length === 0 ? null : totals.reduce((sum, entry) => sum + Math.max(0, entry.available - entry.registered), 0) / totals.length;
 }
 
 function formatHours(value: number) {

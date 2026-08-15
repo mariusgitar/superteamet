@@ -14,6 +14,7 @@ interface MonthlyRow {
   user_id: string;
   total_hours: number;
   total_percent: number;
+  days_absent: number;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -39,7 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             hour_item.key AS project_id,
             entry.user_id,
             SUM((hour_item.value)::numeric)::float8 AS total_hours,
-            SUM(COALESCE((entry.allocations ->> hour_item.key)::numeric, 0))::float8 AS total_percent
+            SUM(COALESCE((entry.allocations ->> hour_item.key)::numeric, 0))::float8 AS total_percent,
+            SUM(entry.days_absent)::float8 AS days_absent
           FROM week_entries entry
           CROSS JOIN LATERAL jsonb_each_text(entry.hours) hour_item
           WHERE entry.type = 'actual'
@@ -55,7 +57,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             hour_item.key AS project_id,
             entry.user_id,
             SUM((hour_item.value)::numeric)::float8 AS total_hours,
-            SUM(COALESCE((entry.allocations ->> hour_item.key)::numeric, 0))::float8 AS total_percent
+            SUM(COALESCE((entry.allocations ->> hour_item.key)::numeric, 0))::float8 AS total_percent,
+            SUM(entry.days_absent)::float8 AS days_absent
           FROM week_entries entry
           CROSS JOIN LATERAL jsonb_each_text(entry.hours) hour_item
           WHERE entry.type = 'actual' AND entry.input_mode = 'hours' AND entry.hours IS NOT NULL
@@ -71,6 +74,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         userId: row.user_id,
         totalHours: Number(row.total_hours),
         totalPercent: Number(row.total_percent),
+        daysAbsent: Number(row.days_absent ?? 0),
       })),
     });
   } catch (err) {

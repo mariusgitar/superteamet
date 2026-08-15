@@ -1,7 +1,6 @@
 import type { AllocationMap, DashboardResponse, DashboardWeekResponse, Project, User, WeekEntry } from '../types';
 import { weekNumber, weekStart as getWeekStart } from './utils';
 
-const FULL_WEEK_HOURS = 37.5;
 const DONUT_PROJECT_LIMIT = 5;
 const LEGEND_PROJECT_LIMIT = 3;
 
@@ -326,8 +325,11 @@ function summarizeActiveProjects(entries: WeekEntry[]): number {
 function summarizeUnregistered(entries: WeekEntry[]): number | null {
   const hourEntries = entries.filter((entry) => entry.type === 'actual' && entry.inputMode === 'hours' && typeof entry.totalHours === 'number');
   if (hourEntries.length === 0) return null;
-  const totalRegistered = hourEntries.reduce((sum, entry) => sum + (entry.totalHours ?? 0), 0);
-  return Math.max(0, FULL_WEEK_HOURS - totalRegistered / hourEntries.length);
+  const totalUnregistered = hourEntries.reduce((sum, entry) => {
+    const availableHours = (5 - (entry.daysAbsent ?? 0)) * 7.5;
+    return sum + Math.max(0, availableHours - (entry.totalHours ?? 0));
+  }, 0);
+  return totalUnregistered / hourEntries.length;
 }
 
 function formatDelta(params: { current: number | null; previous: number | null; unit: 'hours' | 'count'; invertTone?: boolean }): string {

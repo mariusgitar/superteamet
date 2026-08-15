@@ -108,6 +108,7 @@ CREATE TABLE week_entries (
   allocations  JSONB NOT NULL,           -- { "<project_uuid>": 40, "<project_uuid>": 60 }
   hours        JSONB,                    -- actual hours per project, null for slider entries
   input_mode   TEXT DEFAULT 'slider',    -- 'slider' or 'hours', default 'slider'
+  days_absent  NUMERIC(3,1) DEFAULT 0,   -- 0–5 in half-day increments
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT week_entries_unique UNIQUE (user_id, week_start, type)
 );
@@ -142,6 +143,7 @@ Protected write routes require header `x-api-secret: <API_SECRET>` — set this 
 | POST   | `/api/entries`                    | Upsert entry `{ userId, weekStart, type, allocations }` |
 | GET    | `/api/greeting?name=`             | Generate a short AI greeting for the current user       |
 | GET    | `/api/dashboard/projects?months=` | Aggregate hour-mode project data by month and user      |
+| GET    | `/api/export?from=&to=`            | Flat hour-mode rows for client-side CSV export          |
 
 ---
 
@@ -223,7 +225,7 @@ VITE_API_SECRET=same-value-as-API_SECRET
 
 - No authentication / login flow (localStorage only)
 - No email or push notifications
-- No CSV/PDF export
+- No PDF export
 - No comment fields on entries
 - No admin password UI (API_SECRET is sufficient)
 

@@ -20,6 +20,11 @@ CREATE TABLE week_entries (
   week_start DATE NOT NULL,
   type TEXT NOT NULL,
   allocations JSONB NOT NULL,
+  hours JSONB,
+  input_mode TEXT DEFAULT 'slider',
+  days_absent NUMERIC(3,1) DEFAULT 0,
   submitted_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   CONSTRAINT week_entries_unique UNIQUE (user_id, week_start, type)
 );
+
+ALTER TABLE week_entries ADD COLUMN IF NOT EXISTS days_absent NUMERIC(3,1) DEFAULT 0;

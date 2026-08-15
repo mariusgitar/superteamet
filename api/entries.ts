@@ -9,6 +9,7 @@ interface EntryRow {
   allocations: Record<string, number>;
   hours: Record<string, number> | null;
   input_mode: 'slider' | 'hours';
+  days_absent: number;
   submitted_at: string;
 }
 
@@ -30,7 +31,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (weekStart) {
         const rows = await sql<EntryRow[]>`
-          SELECT id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
+          SELECT id, user_id, week_start, type, allocations, hours, input_mode, days_absent, submitted_at
           FROM week_entries
           WHERE user_id = ${userId} AND week_start = ${weekStart}
         `;
@@ -47,7 +48,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (limit && Number.isInteger(limit) && limit > 0) {
         if (type === 'actual') {
           const rows = await sql<EntryRow[]>`
-            SELECT id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
+            SELECT id, user_id, week_start, type, allocations, hours, input_mode, days_absent, submitted_at
             FROM week_entries
             WHERE user_id = ${userId} AND type = 'actual'
             ORDER BY week_start DESC, submitted_at DESC
@@ -58,7 +59,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         const rows = await sql<EntryRow[]>`
-          SELECT id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
+          SELECT id, user_id, week_start, type, allocations, hours, input_mode, days_absent, submitted_at
           FROM week_entries
           WHERE user_id = ${userId}
           ORDER BY week_start DESC, submitted_at DESC
@@ -76,39 +77,45 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return unauthorized(res);
       }
 
-      const { userId, weekStart, type, allocations, hours, inputMode } = req.body as {
+      const { userId, weekStart, type, allocations, hours, inputMode, daysAbsent = 0 } = req.body as {
         userId?: string;
         weekStart?: string;
         type?: 'plan' | 'actual';
         allocations?: Record<string, number>;
         hours?: Record<string, number> | null;
         inputMode?: 'slider' | 'hours';
+        daysAbsent?: number;
       };
 
       if (!userId || !weekStart || !type || !allocations) {
         return res.status(400).json({ error: 'userId, weekStart, type and allocations are required' });
+      }
+      if (!Number.isFinite(daysAbsent) || daysAbsent < 0 || daysAbsent > 5 || daysAbsent * 2 % 1 !== 0) {
+        return res.status(400).json({ error: 'daysAbsent must be between 0 and 5 in half-day increments' });
       }
 
       const normalizedInputMode = inputMode === 'hours' ? 'hours' : 'slider';
       const normalizedHours = hours ?? null;
 
       const [upserted] = await sql<EntryRow[]>`
-        INSERT INTO week_entries (user_id, week_start, type, allocations, hours, input_mode)
+        INSERT INTO week_entries (user_id, week_start, type, allocations, hours, input_mode, days_absent)
         VALUES (
           ${userId},
           ${weekStart},
           ${type},
           ${sql.json(allocations)},
           ${normalizedHours === null ? null : sql.json(normalizedHours)},
-          ${normalizedInputMode}
+          ${normalizedInputMode},
+          ${daysAbsent}
         )
         ON CONFLICT (user_id, week_start, type)
         DO UPDATE SET
           allocations = EXCLUDED.allocations,
           hours = EXCLUDED.hours,
           input_mode = EXCLUDED.input_mode,
+          days_absent = EXCLUDED.days_absent,
           submitted_at = NOW()
-        RETURNING id, user_id, week_start, type, allocations, hours, input_mode, submitted_at
+        RETURNING id, user_id, week_start, type, allocations, hours, input_mode, days_absent, submitted_at
       `;
 
       return res.status(200).json(toWeekEntry(upserted));
@@ -132,6 +139,7 @@ function toWeekEntry(row: EntryRow | null) {
     allocations: row.allocations,
     hours: row.hours ?? undefined,
     inputMode: row.input_mode ?? 'slider',
+    daysAbsent: Number(row.days_absent ?? 0),
     submittedAt: row.submitted_at,
   };
 }
