@@ -4,7 +4,7 @@ import type { Project } from '../types';
 import { AddProjectModal } from './ProjectAdmin/AddProjectModal';
 
 const QUICK_HOURS = [0.5, 1, 2, 3, 4, 6, 8] as const;
-const AVAILABLE_DAYS = [5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1, 0.5] as const;
+const AVAILABLE_DAYS = [5, 4, 3, 2, 1, 0] as const;
 
 interface HoursInputProps {
   hours: Record<string, number>;
@@ -107,14 +107,18 @@ export function HoursInput({
 
   return (
     <section className="space-y-4">
-      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-        <p className="mb-3 text-sm font-semibold text-slate-800">Tilgjengelig denne uka</p>
-        <div className="flex flex-wrap gap-2">
-          {AVAILABLE_DAYS.map((days) => {
-            const selected = days === availableDays;
-            return <button className={`rounded-lg border px-2.5 py-1.5 text-sm font-medium transition ${selected ? (days === 5 ? 'border-emerald-500 bg-emerald-100 text-emerald-800' : 'border-amber-500 bg-amber-100 text-amber-800') : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`} key={days} onClick={() => onDaysAbsentChange(5 - days)} type="button">{formatHours(days)}d</button>;
-          })}
-        </div>
+      <div className="flex items-center gap-2">
+        <label className="text-sm text-gray-500" htmlFor="available-days">Tilgjengelig denne uka:</label>
+        <select
+          className={`rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm outline-none transition focus:border-indigo-500 ${daysAbsent > 0 ? 'text-amber-600' : 'text-slate-700'}`}
+          id="available-days"
+          onChange={(event) => onDaysAbsentChange(5 - Number(event.target.value))}
+          value={availableDays}
+        >
+          {AVAILABLE_DAYS.map((days) => (
+            <option key={days} value={days}>{`${days} ${days === 1 ? 'dag' : 'dager'}`}</option>
+          ))}
+        </select>
       </div>
       <div className="space-y-3">
         {selectedProjectIds.map((projectId) => {
@@ -281,7 +285,7 @@ export function HoursInput({
 
       <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm">
         <p className={totalHours > 0 ? 'font-medium text-emerald-700' : 'font-medium text-slate-500'}>
-          {`Registrert: ${formatHours(totalHours)}t av ~${formatHours(availableHours)}t${daysAbsent > 0 ? ` tilgjengelig (${formatHours(availableDays)} dager)` : ''}`}
+          {`Registrert: ${formatHours(totalHours)}t av ~${formatHours(availableHours)}t${daysAbsent > 0 ? ` (${formatHours(availableDays)} ${availableDays === 1 ? 'dag' : 'dager'} tilgjengelig)` : ''}`}
         </p>
         <p className="mt-1 text-slate-500">{`Ikke registrert: ~${formatHours(remainingHours)}t`}</p>
       </div>
