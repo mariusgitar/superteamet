@@ -9,11 +9,23 @@ interface WeekViewProps {
   currentWeekStart: string;
 }
 
+const CELEBRATION_MESSAGES = [
+  'Uka er loggført! 🎉',
+  'Ryddig uke, ryddig hode. ✨',
+  'Registrert og glemt — på den gode måten. 🚀',
+  'Nok en uke i boks! 💪',
+  'Data er makt. Du har makt. 📊',
+  'Teamet takker deg. 🙌',
+  'Uka dokumentert. Helgen fortjent. 🌅',
+  'Imponerende konsistens! 💡',
+];
+
 export function WeekView({ user, currentWeekStart }: WeekViewProps) {
   const [entries, setEntries] = useState<WeekEntriesResponse>({ actual: null });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState(CELEBRATION_MESSAGES[0]);
 
   const loadEntries = async () => {
     try {
@@ -41,6 +53,7 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
 
   const handleSubmitted = async () => {
     await loadEntries();
+    setConfirmationMessage(CELEBRATION_MESSAGES[Math.floor(Math.random() * CELEBRATION_MESSAGES.length)]);
     setShowConfirmation(true);
   };
 
@@ -81,7 +94,8 @@ export function WeekView({ user, currentWeekStart }: WeekViewProps) {
     return (
       <section className="rounded-3xl border border-emerald-200 bg-white/85 p-6 shadow-[0_20px_50px_-34px_rgba(79,70,229,0.7)]">
         <h2 className="text-xl font-semibold text-slate-900">✓ Ukas arbeid registrert</h2>
-        <p className="mt-2 text-slate-600">{formatWeekLabel(currentWeekStart)}</p>
+        <p className="mt-2 text-slate-700">{confirmationMessage}</p>
+        <p className="mt-1 text-slate-500">{formatWeekLabel(currentWeekStart)}</p>
         <button
           className="mt-6 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700"
           onClick={() => setShowConfirmation(false)}

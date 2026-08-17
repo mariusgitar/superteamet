@@ -16,6 +16,9 @@ body {
 
 @theme {
   --animate-fade-up: fade-up 0.35s ease-out;
+  --animate-celebration-fall-fast: celebration-fall 2s linear forwards;
+  --animate-celebration-fall: celebration-fall 2.5s linear forwards;
+  --animate-celebration-fall-slow: celebration-fall 3s linear forwards;
 
   @keyframes fade-up {
     from {
@@ -26,6 +29,18 @@ body {
     to {
       opacity: 1;
       transform: translateY(0);
+    }
+  }
+
+  @keyframes celebration-fall {
+    from {
+      top: -50px;
+      transform: rotate(0deg);
+    }
+
+    to {
+      top: 110vh;
+      transform: rotate(360deg);
     }
   }
 }
