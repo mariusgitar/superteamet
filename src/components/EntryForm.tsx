@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getActualHistory, getProjects, upsertEntry } from '../lib/api';
+import { celebrate } from '../lib/celebrate';
 import { sortProjects } from '../lib/utils';
 import type { Project, WeekEntry } from '../types';
 import { HoursInput } from './HoursInput';
@@ -74,6 +75,7 @@ export function EntryForm({ userId, weekStart, existingEntry = null, onSubmitted
     setSubmitting(true);
     try {
       await upsertEntry({ userId, weekStart, type: 'actual', allocations, hours, inputMode: 'hours', daysAbsent });
+      if (!existingEntry) celebrate();
       await onSubmitted?.();
     } finally {
       setSubmitting(false);
